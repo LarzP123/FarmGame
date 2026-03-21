@@ -1,7 +1,9 @@
+global abs_val
 global copy_string
 global get_time
 global mem_alloc
 global mem_free
+global mem_set
 global get_rand
 global set_rand
 global print_text
@@ -48,6 +50,17 @@ section .bss
     int_buf  resb 32
 
 section .text
+
+; ═════════════════════════════════════════════════════════════════
+; abs_val(int x) -> eax  (branchless absolute value)
+; ═════════════════════════════════════════════════════════════════
+abs_val:
+    mov     eax, ecx
+    mov     edx, eax
+    sar     edx, 31
+    add     eax, edx
+    xor     eax, edx
+    ret
 
 ; ═════════════════════════════════════════════════════════════════
 ; copy_string(char* d, char* s)
@@ -173,6 +186,20 @@ mem_free:
     pop     rbx
     ret
 
+; ═════════════════════════════════════════════════════════════════
+; mem_set(void* dst, int val, unsigned int n)
+; ═════════════════════════════════════════════════════════════════
+mem_set:
+    test    r8d, r8d
+    jz      .mem_set_done
+    movzx   eax, dl           ; truncate val to one byte
+.mem_set_loop:
+    mov     [rcx], al
+    inc     rcx
+    dec     r8d
+    jnz     .mem_set_loop
+.mem_set_done:
+    ret
 
 ; ═════════════════════════════════════════════════════════════════
 ; set_rand(unsigned long seed_val)
