@@ -17,6 +17,9 @@ int main(void)
 
     gfx_hline(0, SCREEN_W-1, SCREEN_H/2, MAGENTA);
     gfx_vline(SCREEN_W/2, 0, SCREEN_H-1, MAGENTA);
+    gfx_draw_string(10, 10, "abcdefghijklmnopqrstuvwxyz", WHITE);
+    gfx_draw_string(10, 20, "ABCDEFGHIJKLMNOPQSRTUVWXYZ", YELLOW);
+    gfx_draw_char(400, 300, 'A', RED);
 
     while (gfx_present()) {
     }

@@ -36,8 +36,18 @@
 		</Compiler>
 		<Linker>
 			<Add library="obj/Debug/utils.obj" />
+			<Add library="gdi32" />
+			<Add library="user32" />
 		</Linker>
 		<Unit filename="adjustfarmsetup.c">
+			<Option compilerVar="CC" />
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="charbitmap.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="gfxutils.c">
 			<Option compilerVar="CC" />
 			<Option compile="0" />
 			<Option link="0" />

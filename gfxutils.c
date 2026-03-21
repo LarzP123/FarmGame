@@ -1,331 +1,309 @@
-/* ── screen ──────────────────────────────────────────────────────────────── */
+#include "charbitmap.c"
+
+/* screen */
 #define SCREEN_W 800
 #define SCREEN_H 600
 
-/* ── colour ──────────────────────────────────────────────────────────────── */
-#define MKRGB(r,g,b) ((unsigned int)(((r)<<16)|((g)<<8)|(b)))
-#define BLACK   MKRGB(0,0,0)
-#define WHITE   MKRGB(255,255,255)
-#define RED     MKRGB(255,0,0)
-#define GREEN   MKRGB(0,255,0)
-#define BLUE    MKRGB(0,0,255)
-#define YELLOW  MKRGB(255,255,0)
-#define CYAN    MKRGB(0,255,255)
-#define MAGENTA MKRGB(255,0,255)
+/* color */
+#define COL_RGB(r,g,b) ((unsigned int)(((r)<<16)|((g)<<8)|(b)))
+#define BLACK   COL_RGB(0  ,0  ,0  )
+#define WHITE   COL_RGB(255,255,255)
+#define RED     COL_RGB(255,0  ,0  )
+#define GREEN   COL_RGB(0  ,255,0  )
+#define BLUE    COL_RGB(0  ,0  ,255)
+#define YELLOW  COL_RGB(255,255,0  )
+#define CYAN    COL_RGB(0  ,255,255)
+#define MAGENTA COL_RGB(255,0  ,255)
 
-/* ── Win32 constants ─────────────────────────────────────────────────────── */
-#define WS_OVERLAPPED       0x00000000
-#define WS_CAPTION          0x00C00000
-#define WS_SYSMENU          0x00080000
-#define WS_THICKFRAME       0x00040000
-#define WS_MINIMIZEBOX      0x00020000
-#define WS_MAXIMIZEBOX      0x00010000
-#define WS_OVERLAPPEDWINDOW (WS_OVERLAPPED|WS_CAPTION|WS_SYSMENU|WS_THICKFRAME|WS_MINIMIZEBOX|WS_MAXIMIZEBOX)
-#define WS_VISIBLE          0x10000000
-#define CS_OWNDC            0x0020
-#define CW_USEDEFAULT       ((int)0x80000000)
-#define WM_DESTROY          0x0002
-#define WM_KEYDOWN          0x0100
-#define VK_ESCAPE           0x1B
-#define PM_REMOVE           0x0001
-#define SRCCOPY             0x00CC0020
-#define DIB_RGB_COLORS      0
-#define BI_RGB              0
-#define FALSE               0
-#define IDC_ARROW           ((const char *)32512)
+/* Win32 structs */
+struct wind_class { /* WNDCLASSEXA */
+    unsigned int cb_size;
+    unsigned int style;
+    void *lpfn_wnd_proc;
+    int cb_cls_extra;
+    int cb_wnd_extra;
+    void *h_instance;
+    void *h_icon;
+    void *h_cursor;
+    void *hbr_background;
+    const char *lpsz_menu_name;
+    const char *lpsz_class_name;
+    void *h_icon_sm;
+};
 
-/* ── Win32 structs ───────────────────────────────────────────────────────── */
-typedef struct {
-    unsigned int  cbSize;
-    unsigned int  style;
-    void         *lpfnWndProc;
-    int           cbClsExtra;
-    int           cbWndExtra;
-    void         *hInstance;
-    void         *hIcon;
-    void         *hCursor;
-    void         *hbrBackground;
-    const char   *lpszMenuName;
-    const char   *lpszClassName;
-    void         *hIconSm;
-} WNDCLASSEXA;
+struct rect { int left,top,right,bottom; }; /* RECT */
 
-typedef struct { int left, top, right, bottom; } RECT;
+struct bitmap_info_header { /* BITMAPINFOHEADER */
+    unsigned int bi_size;
+    int bi_width;
+    int bi_height;
+    unsigned short bi_planes;
+    unsigned short bi_bit_count;
+    unsigned int bi_compression;
+    unsigned int bi_sizeImage;
+    int bi_x_pels_per_meter;
+    int bi_y_pels_per_meter;
+    unsigned int bi_clr_used;
+    unsigned int bi_clr_important;
+};
 
-typedef struct {
-    unsigned int   biSize;
-    int            biWidth;
-    int            biHeight;
-    unsigned short biPlanes;
-    unsigned short biBitCount;
-    unsigned int   biCompression;
-    unsigned int   biSizeImage;
-    int            biXPelsPerMeter;
-    int            biYPelsPerMeter;
-    unsigned int   biClrUsed;
-    unsigned int   biClrImportant;
-} BITMAPINFOHEADER;
+struct bitmap_info { /* BITMAPINFO */
+    struct bitmap_info_header bmi_header;
+    unsigned int bmiColors[1];
+};
 
-typedef struct {
-    BITMAPINFOHEADER bmiHeader;
-    unsigned int     bmiColors[1];
-} BITMAPINFO;
-
-typedef struct {
+struct winuser_thread_msg { /* MSG */
     void         *hwnd;
     unsigned int  message;
     unsigned int  pad;
-    void         *wParam;
-    void         *lParam;
+    void         *w_Param;
+    void         *l_param;
     unsigned int  time;
     int           pt_x;
     int           pt_y;
-} MSG;
+};
 
-/* ── Win32 imports (-lgdi32 -luser32 in linker settings) ────────────────── */
-extern void * __stdcall RegisterClassExA(const WNDCLASSEXA *);
+/* Win32 imports (-lgdi32 -luser32 in linker settings) */
+extern void * __stdcall RegisterClassExA(const struct wind_class *);
 extern void * __stdcall CreateWindowExA(unsigned int,const char*,const char*,unsigned int,int,int,int,int,void*,void*,void*,void*);
-extern int    __stdcall AdjustWindowRect(RECT*,unsigned int,int);
+extern int    __stdcall AdjustWindowRect(struct rect*,unsigned int,int);
 extern void * __stdcall GetDC(void*);
 extern int    __stdcall ReleaseDC(void*,void*);
-extern int    __stdcall PeekMessageA(MSG*,void*,unsigned int,unsigned int,unsigned int);
-extern int    __stdcall TranslateMessage(const MSG*);
-extern void * __stdcall DispatchMessageA(const MSG*);
+extern int    __stdcall PeekMessageA(struct winuser_thread_msg*,void*,unsigned int,unsigned int,unsigned int);
+extern int    __stdcall TranslateMessage(const struct winuser_thread_msg*);
+extern void * __stdcall DispatchMessageA(const struct winuser_thread_msg*);
 extern int    __stdcall DestroyWindow(void*);
 extern void   __stdcall PostQuitMessage(int);
 extern void * __stdcall DefWindowProcA(void*,unsigned int,void*,void*);
 extern void * __stdcall LoadCursorA(void*,const char*);
 extern void * __stdcall CreateCompatibleDC(void*);
-extern void * __stdcall CreateDIBSection(void*,const BITMAPINFO*,unsigned int,void**,void*,unsigned int);
+extern void * __stdcall CreateDIBSection(void*,const struct bitmap_info*,unsigned int,void**,void*,unsigned int);
 extern void * __stdcall SelectObject(void*,void*);
 extern int    __stdcall DeleteObject(void*);
 extern int    __stdcall DeleteDC(void*);
 extern int    __stdcall BitBlt(void*,int,int,int,int,void*,int,int,unsigned int);
 extern void * __stdcall GetModuleHandleA(const char*);
 
-/* ── from utils.asm ──────────────────────────────────────────────────────── */
-extern int gfx_abs(int x);
-
-/* ── forward declarations ────────────────────────────────────────────────── */
-void  gfx_clear(unsigned int color);
-void  gfx_put_pixel(int x, int y, unsigned int color);
-void  gfx_hline(int x0, int x1, int y, unsigned int color);
-void  gfx_vline(int x, int y0, int y1, unsigned int color);
-void  gfx_line(int x0, int y0, int x1, int y1, unsigned int color);
-void  gfx_rect(int x, int y, int w, int h, unsigned int color);
-void  gfx_rect_fill(int x, int y, int w, int h, unsigned int color);
-void  gfx_circle(int cx, int cy, int r, unsigned int color);
-void  gfx_circle_fill(int cx, int cy, int r, unsigned int color);
-int   gfx_init(const char *title);
-void  gfx_shutdown(void);
-int   gfx_present(void);
+/* utils.asm */
+extern int abs_val(int x);
+extern void mem_set(void *dst,int val,unsigned int n);
 
 /* ── internal state ──────────────────────────────────────────────────────── */
-unsigned int *framebuffer = 0;
+unsigned int *frame_buffer = 0;
 
-static void         *g_hwnd    = 0;
-static void         *g_hdc     = 0;
-static void         *g_hbm     = 0;
-static void         *g_memdc   = 0;
-static BITMAPINFO    g_bmi;
-static int           g_running = 1;
+static void *g_hwnd = 0;
+static void *g_hdc = 0;
+static void *g_hbm = 0;
+static void *g_memdc = 0;
+static struct bitmap_info g_bmi;
+static int g_running = 1;
 
-/* ── manual memset ───────────────────────────────────────────────────────── */
-static void gfx_memset(void *dst, int val, unsigned int n)
-{
-    unsigned char *p = (unsigned char *)dst;
-    while (n--) *p++ = (unsigned char)val;
-}
-
-/* ── window procedure ────────────────────────────────────────────────────── */
+/* window procedure */
 typedef void * (__stdcall *WNDPROC)(void*, unsigned int, void*, void*);
 
-static void * __stdcall wnd_proc(void *hwnd, unsigned int msg, void *wp, void *lp)
-{
+static void * __stdcall wnd_proc(void *hwnd, unsigned int msg, void *wp, void *lp) {
     switch (msg) {
-        case WM_DESTROY:
+        case 0x0002: { /* VM_DESTROY */
             g_running = 0;
             PostQuitMessage(0);
             return 0;
-        case WM_KEYDOWN:
-            if (wp == (void *)VK_ESCAPE) {
+        }
+        case 0x0100: { /* VM_KEYDOWN */
+            if (wp == (void *)0x1B) { /* VK_ESCAPE */
                 g_running = 0;
                 DestroyWindow(hwnd);
             }
             return 0;
+        }
     }
     return DefWindowProcA(hwnd, msg, wp, lp);
 }
 
-/* ── init / shutdown ─────────────────────────────────────────────────────── */
-int gfx_init(const char *title)
-{
-    WNDCLASSEXA wc;
-    RECT r;
+void gfx_clear() {
+    mem_set(frame_buffer,0,4*SCREEN_W*SCREEN_H);
+}
+
+/* init/shutdown */
+int gfx_init(const char *title) {
+    struct wind_class wind_class_inst;
+    struct rect window_rect;
     void *bits;
-    union { WNDPROC fn; void *ptr; } proc_cast;
+    union { WNDPROC fn;void *ptr; } proc_cast;
 
-    gfx_memset(&wc, 0, sizeof(wc));
-    wc.cbSize        = sizeof(wc);
-    wc.style         = CS_OWNDC;
-    proc_cast.fn     = wnd_proc;
-    wc.lpfnWndProc   = proc_cast.ptr;
-    wc.hInstance     = GetModuleHandleA(0);
-    wc.hCursor       = LoadCursorA(0, IDC_ARROW);
-    wc.lpszClassName = "GfxWnd";
-    RegisterClassExA(&wc);
+    mem_set(&wind_class_inst,0,sizeof(struct wind_class));
+    wind_class_inst.cb_size=sizeof(struct wind_class);
+    wind_class_inst.style=0x0020; /* CS_OWNDC */
+    proc_cast.fn=wnd_proc;
+    wind_class_inst.lpfn_wnd_proc=proc_cast.ptr;
+    wind_class_inst.h_instance=GetModuleHandleA(0);
+    wind_class_inst.h_cursor=LoadCursorA(0,((const char *)32512)); /* IDC_ARROW */
+    wind_class_inst.lpsz_class_name="GfxWnd";
+    RegisterClassExA(&wind_class_inst);
 
-    r.left = 0; r.top = 0; r.right = SCREEN_W; r.bottom = SCREEN_H;
-    AdjustWindowRect(&r, WS_OVERLAPPEDWINDOW, FALSE);
+    window_rect.left=0;window_rect.top=0;window_rect.right=SCREEN_W;window_rect.bottom=SCREEN_H;
+    AdjustWindowRect(&window_rect,0x00CF0000,0); /* WS_OVERLAPPEDWINDOW */
 
-    g_hwnd = CreateWindowExA(
+    g_hwnd=CreateWindowExA(
         0, "GfxWnd", title,
-        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-        CW_USEDEFAULT, CW_USEDEFAULT,
-        r.right - r.left, r.bottom - r.top,
+        0x00CF0000 | 0x10000000, /* WS_OVERLAPPEDWINDOW, WS_VISIBLE */
+        ((int)0x80000000), ((int)0x80000000), /* CW_USEDEFAULT */
+        SCREEN_W,SCREEN_H,
         0, 0, GetModuleHandleA(0), 0
     );
-    if (!g_hwnd) return 0;
+    if (!g_hwnd) { return 0; }
 
-    g_hdc   = GetDC(g_hwnd);
-    g_memdc = CreateCompatibleDC(g_hdc);
+    g_hdc=GetDC(g_hwnd);
+    g_memdc=CreateCompatibleDC(g_hdc);
 
-    gfx_memset(&g_bmi, 0, sizeof(g_bmi));
-    g_bmi.bmiHeader.biSize        = sizeof(BITMAPINFOHEADER);
-    g_bmi.bmiHeader.biWidth       = SCREEN_W;
-    g_bmi.bmiHeader.biHeight      = -SCREEN_H;
-    g_bmi.bmiHeader.biPlanes      = 1;
-    g_bmi.bmiHeader.biBitCount    = 32;
-    g_bmi.bmiHeader.biCompression = BI_RGB;
+    mem_set(&g_bmi,0,sizeof(g_bmi));
+    g_bmi.bmi_header.bi_size=sizeof(struct bitmap_info_header);
+    g_bmi.bmi_header.bi_width=SCREEN_W;
+    g_bmi.bmi_header.bi_height=-SCREEN_H;
+    g_bmi.bmi_header.bi_planes=1;
+    g_bmi.bmi_header.bi_bit_count=32;
+    g_bmi.bmi_header.bi_compression=0;
 
-    bits  = 0;
-    g_hbm = CreateDIBSection(g_memdc, &g_bmi, DIB_RGB_COLORS, &bits, 0, 0);
-    if (!g_hbm) return 0;
+    bits=0;
+    g_hbm=CreateDIBSection(g_memdc,&g_bmi,0,&bits,0,0);
+    if (!g_hbm) { return 0; }
 
-    SelectObject(g_memdc, g_hbm);
-    framebuffer = (unsigned int *)bits;
+    SelectObject(g_memdc,g_hbm);
+    frame_buffer=(unsigned int *)bits;
 
-    gfx_clear(BLACK);
+    gfx_clear();
     return 1;
 }
 
-void gfx_shutdown(void)
-{
-    if (g_hbm)   DeleteObject(g_hbm);
-    if (g_memdc) DeleteDC(g_memdc);
-    if (g_hdc)   ReleaseDC(g_hwnd, g_hdc);
+void gfx_shutdown(void) {
+    if (g_hbm) { DeleteObject(g_hbm); }
+    if (g_memdc) { DeleteDC(g_memdc); }
+    if (g_hdc) { ReleaseDC(g_hwnd,g_hdc); }
 }
 
-int gfx_present(void)
-{
-    MSG msg;
-    while (PeekMessageA(&msg, 0, 0, 0, PM_REMOVE)) {
+int gfx_present(void) {
+    struct winuser_thread_msg msg;
+    while (PeekMessageA(&msg,0,0,0,0x0001)) { /* PM_REMOVE */
         TranslateMessage(&msg);
         DispatchMessageA(&msg);
     }
-    BitBlt(g_hdc, 0, 0, SCREEN_W, SCREEN_H, g_memdc, 0, 0, SRCCOPY);
+    BitBlt(g_hdc,0,0,SCREEN_W,SCREEN_H,g_memdc,0,0,0x00CC0020); /* SRCCOPY */
     return g_running;
 }
 
-/* ── primitives ──────────────────────────────────────────────────────────── */
-void gfx_clear(unsigned int color)
-{
-    int n = SCREEN_W * SCREEN_H;
-    unsigned int *p = framebuffer;
-    while (n--) *p++ = color;
+void gfx_put_pixel(int x,int y,unsigned int color) {
+    frame_buffer[y*SCREEN_W+x]=color;
 }
 
-static int in_bounds(int x, int y)
-{
-    return (unsigned int)x < SCREEN_W && (unsigned int)y < SCREEN_H;
+void gfx_hline(int x_0,int x_1,int y,unsigned int color) {
+    unsigned int *pixel;
+    int pixel_iter;
+    if ((unsigned int)y>=SCREEN_H) { return; }
+    if (x_0<0) { x_0=0; }
+    if (x_1>=SCREEN_W) { x_1=SCREEN_W-1; }
+    pixel=frame_buffer+y*SCREEN_W+x_0;
+    pixel_iter=x_1-x_0+1;
+    while (pixel_iter--) { *pixel++=color; }
 }
 
-void gfx_put_pixel(int x, int y, unsigned int color)
-{
-    if (in_bounds(x, y))
-        framebuffer[y * SCREEN_W + x] = color;
+void gfx_vline(int x,int y_0,int y_1,unsigned int color) {
+    unsigned int *pixel;
+    int pixel_iter;
+    if ((unsigned int)x >= SCREEN_W) { return; }
+    if (y_0<0) { y_0=0; }
+    if (y_1>=SCREEN_H) { y_1=SCREEN_H-1; }
+    pixel=frame_buffer+y_0*SCREEN_W+x;
+    pixel_iter=y_1-y_0+1;
+    while (pixel_iter--) { *pixel=color;pixel+=SCREEN_W; }
 }
 
-void gfx_hline(int x0, int x1, int y, unsigned int color)
-{
-    unsigned int *row;
-    int n, t;
-    if ((unsigned int)y >= SCREEN_H) return;
-    if (x0 > x1) { t = x0; x0 = x1; x1 = t; }
-    if (x0 < 0) x0 = 0;
-    if (x1 >= SCREEN_W) x1 = SCREEN_W - 1;
-    row = framebuffer + y * SCREEN_W + x0;
-    n = x1 - x0 + 1;
-    while (n--) *row++ = color;
-}
-
-void gfx_vline(int x, int y0, int y1, unsigned int color)
-{
-    unsigned int *p;
-    int n, t;
-    if ((unsigned int)x >= SCREEN_W) return;
-    if (y0 > y1) { t = y0; y0 = y1; y1 = t; }
-    if (y0 < 0) y0 = 0;
-    if (y1 >= SCREEN_H) y1 = SCREEN_H - 1;
-    p = framebuffer + y0 * SCREEN_W + x;
-    n = y1 - y0 + 1;
-    while (n--) { *p = color; p += SCREEN_W; }
-}
-
-void gfx_line(int x0, int y0, int x1, int y1, unsigned int color)
-{
-    int dx  =  gfx_abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
-    int dy  = -gfx_abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
-    int err = dx + dy;
-    int e2;
-    for (;;) {
-        gfx_put_pixel(x0, y0, color);
-        if (x0 == x1 && y0 == y1) break;
-        e2 = 2 * err;
-        if (e2 >= dy) { err += dy; x0 += sx; }
-        if (e2 <= dx) { err += dx; y0 += sy; }
+/* Bresenham's line algorithm */
+void gfx_line(int x_0,int y_0,int x_1,int y_1,unsigned int color) {
+    int dist_x=+abs_val(x_1-x_0),dir_x=x_0<x_1?1:-1;
+    int dist_y=-abs_val(y_1-y_0),dir_y=y_0<y_1?1:-1;
+    int double_acc_err,acc_err=dist_x+dist_y;
+    while (1) {
+        gfx_put_pixel(x_0,y_0,color);
+        if (x_0==x_1&&y_0==y_1) { break; }
+        double_acc_err=2*acc_err;
+        if (double_acc_err>= dist_y) { acc_err+=dist_y;x_0+=dir_x; }
+        if (double_acc_err<= dist_x) { acc_err+=dist_x;y_0+=dir_y; }
     }
 }
 
-void gfx_rect(int x, int y, int w, int h, unsigned int color)
-{
-    gfx_hline(x,     x+w-1, y,     color);
-    gfx_hline(x,     x+w-1, y+h-1, color);
-    gfx_vline(x,     y,     y+h-1, color);
-    gfx_vline(x+w-1, y,     y+h-1, color);
+void gfx_rect(int left_x,int top_y,int width,int height,unsigned int color) {
+    gfx_hline(left_x,left_x+width-1,top_y,color); /* top */
+    gfx_hline(left_x,left_x+width-1,top_y+height-1,color); /* bottom */
+    gfx_vline(left_x,top_y,top_y+height-1,color); /* left */
+    gfx_vline(left_x+width-1,top_y,top_y+height-1,color); /* right */
 }
 
-void gfx_rect_fill(int x, int y, int w, int h, unsigned int color)
-{
+void gfx_rect_fill(int left_x,int top_y,int width,int height,unsigned int color) {
     int row;
-    for (row = y; row < y + h; row++)
-        gfx_hline(x, x + w - 1, row, color);
-}
-
-void gfx_circle(int cx, int cy, int r, unsigned int color)
-{
-    int x = 0, y = r, d = 1 - r;
-    while (x <= y) {
-        gfx_put_pixel(cx+x, cy+y, color); gfx_put_pixel(cx-x, cy+y, color);
-        gfx_put_pixel(cx+x, cy-y, color); gfx_put_pixel(cx-x, cy-y, color);
-        gfx_put_pixel(cx+y, cy+x, color); gfx_put_pixel(cx-y, cy+x, color);
-        gfx_put_pixel(cx+y, cy-x, color); gfx_put_pixel(cx-y, cy-x, color);
-        if (d < 0) d += 2*x + 3;
-        else       { d += 2*(x-y) + 5; y--; }
-        x++;
+    for (row=top_y;row<top_y+height;row++) {
+        gfx_hline(left_x,left_x+width-1,row,color);
     }
 }
 
-void gfx_circle_fill(int cx, int cy, int r, unsigned int color)
-{
-    int x = 0, y = r, d = 1 - r;
-    while (x <= y) {
-        gfx_hline(cx-x, cx+x, cy+y, color);
-        gfx_hline(cx-x, cx+x, cy-y, color);
-        gfx_hline(cx-y, cx+y, cy+x, color);
-        gfx_hline(cx-y, cx+y, cy-x, color);
-        if (d < 0) d += 2*x + 3;
-        else       { d += 2*(x-y) + 5; y--; }
-        x++;
+void gfx_circle(int center_x,int center_y,int radius,unsigned int color) {
+    int x_iter=0,y_iter=radius,midpoint_outside_circle=1-radius;
+    while (x_iter<=y_iter) {
+        gfx_put_pixel(center_x+x_iter,center_y+y_iter,color); /* bottom bottom right 8th */
+        gfx_put_pixel(center_x-x_iter,center_y+y_iter,color); /* bottom bottom left 8th */
+        gfx_put_pixel(center_x+x_iter,center_y-y_iter,color); /* top top right 8th */
+        gfx_put_pixel(center_x-x_iter,center_y-y_iter,color); /* top top left 8th */
+        gfx_put_pixel(center_x+y_iter,center_y+x_iter,color); /* bottom right right 8th */
+        gfx_put_pixel(center_x-y_iter,center_y+x_iter,color); /* bottom left left 8th */
+        gfx_put_pixel(center_x+y_iter,center_y-x_iter,color); /* top right right 8th */
+        gfx_put_pixel(center_x-y_iter,center_y-x_iter,color); /* top left left 8th */
+        if (midpoint_outside_circle<0) {
+            midpoint_outside_circle+=2*x_iter+3;
+        } else {
+            midpoint_outside_circle+=2*(x_iter-y_iter)+5;y_iter--;
+        }
+        x_iter++;
+    }
+}
+
+void gfx_circle_fill(int center_x,int center_y,int radius,unsigned int color) {
+    int x_iter=0,y_iter=radius,midpoint_outside_circle=1-radius;
+    while (x_iter<=y_iter) {
+        gfx_hline(center_x-x_iter,center_x+x_iter,center_y+y_iter,color); /* bottom 4th */
+        gfx_hline(center_x-x_iter,center_x+x_iter,center_y-y_iter,color); /* top 4th */
+        gfx_hline(center_x-y_iter,center_x+y_iter,center_y+x_iter,color); /* center bottom 4th */
+        gfx_hline(center_x-y_iter,center_x+y_iter,center_y-x_iter,color); /* center top 4th */
+        if (midpoint_outside_circle<0) {
+            midpoint_outside_circle+=2*x_iter+3;
+        } else {
+            midpoint_outside_circle+=2*(x_iter-y_iter)+5;y_iter--;
+        }
+        x_iter++;
+    }
+}
+
+void gfx_draw_char(int char_x,int char_y,char char_in,unsigned int color) {
+    int x_iter,y_iter,char_index=(unsigned char)char_in-32;
+    unsigned char char_bitmap;
+    if (char_index<0||char_index>95) { return; }
+    for (x_iter=0;x_iter<8;x_iter++) {
+        char_bitmap=gfx_font[char_index][x_iter];
+        for (y_iter=0;y_iter<8;y_iter++) {
+            if (char_bitmap&(0x80>>y_iter)) {
+                gfx_put_pixel(char_x+y_iter,char_y+x_iter,color);
+            }
+        }
+    }
+}
+
+void gfx_draw_string(int char_x,int char_y,const char *string,unsigned int color) {
+    while (*string) {
+        if (*string=='\n') {
+            char_x=0;char_y+=8;
+        } else {
+            gfx_draw_char(char_x,char_y,*string,color);
+            if ((char_x+=8)+8>SCREEN_W) {
+                char_x=0;char_y+=8;
+            }
+        }
+        string++;
     }
 }

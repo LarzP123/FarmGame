@@ -2,6 +2,7 @@ global copy_string
 global get_time
 global mem_alloc
 global mem_free
+global mem_set
 global get_rand
 global set_rand
 global print_text
@@ -9,7 +10,7 @@ global read_text
 global print_char
 global print_int
 global text_to_int
-global gfx_abs
+global abs_val
 
 extern GetSystemTimeAsFileTime
 extern GetProcessHeap
@@ -35,9 +36,9 @@ section .bss
 section .text
 
 ; ═════════════════════════════════════════════════════════════════
-; gfx_abs(int x) -> eax  (branchless absolute value)
+; abs_val(int x) -> eax  (branchless absolute value)
 ; ═════════════════════════════════════════════════════════════════
-gfx_abs:
+abs_val:
     mov     eax, ecx
     mov     edx, eax
     sar     edx, 31
@@ -334,4 +335,19 @@ text_to_int:
     add     rsp, 40
     pop     rdi
     pop     rbx
+    ret
+
+; ═════════════════════════════════════════════════════════════════
+; mem_set(void* dst, int val, unsigned int n)
+; ═════════════════════════════════════════════════════════════════
+mem_set:
+    test    r8d, r8d
+    jz      .mem_set_done
+    movzx   eax, dl           ; truncate val to one byte
+.mem_set_loop:
+    mov     [rcx], al
+    inc     rcx
+    dec     r8d
+    jnz     .mem_set_loop
+.mem_set_done:
     ret
