@@ -1,24 +1,29 @@
 #ifndef INITFARMSETUP
 #define INITFARMSETUP
 
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-
 #define mineral_count 5
+
+typedef unsigned long size_type;
+#define NULL ((void *)0)
+
+extern int print_text(const char* s);
+extern void copy_string(char* s,char* d);
+extern void* mem_alloc(size_type size);
+extern void  mem_free(void* ptr);
+
 const char mineral_names[mineral_count][3] = {"N","K","Mo","P","C"};
 
 struct farm {
-    uint8_t minerals[mineral_count];
-    uint8_t current_crop;
+    int minerals[mineral_count];
+    int current_crop;
     char name;
     struct farm* next_farm;
 };
 
 struct crop {
-    uint8_t price;
-    uint8_t mineral_add;
-    uint8_t mineral_del;
+    int price;
+    int mineral_add;
+    int mineral_del;
     char name[8];
     struct crop* next_crop;
 };
@@ -26,9 +31,9 @@ struct crop {
 struct farm* add_farm(struct farm* farms) {
     int i;
 
-    struct farm *new_farm = (struct farm*)malloc(sizeof(struct farm));
+    struct farm *new_farm = (struct farm*)mem_alloc(sizeof(struct farm));
     if (new_farm == NULL) {
-        printf("Memory allocation failed\n");
+        print_text("Memory allocation failed\n");
         return farms;
     }
 
@@ -45,28 +50,28 @@ struct farm* add_farm(struct farm* farms) {
 
 struct crop* create_initial_crops() {
     int crop_length = 4;
-    struct crop *crops=(struct crop*)malloc(crop_length*sizeof(struct crop));
+    struct crop *crops=(struct crop*)mem_alloc(crop_length*sizeof(struct crop));
     struct crop *crop_iter=crops;
 
-    string_copy(crop_iter->name,"Corn");
+    copy_string(crop_iter->name,"Corn");
     crop_iter->mineral_add=0;
     crop_iter->mineral_del=1;
-    crop_iter->next_crop=crop_iter+1;
     crop_iter->price=40;
+    crop_iter->next_crop=crop_iter+1;
     crop_iter=crop_iter->next_crop;
-    string_copy(crop_iter->name,"Beans");
+    copy_string(crop_iter->name,"Beans");
     crop_iter->mineral_add=1;
     crop_iter->mineral_del=2;
     crop_iter->price=40;
-    crop_iter=crop_iter->next_crop;
     crop_iter->next_crop=crop_iter+1;
-    string_copy(crop_iter->name,"Squash");
+    crop_iter=crop_iter->next_crop;
+    copy_string(crop_iter->name,"Squash");
     crop_iter->mineral_add=3;
     crop_iter->mineral_del=4;
     crop_iter->price=40;
-    crop_iter=crop_iter->next_crop;
     crop_iter->next_crop=crop_iter+1;
-    string_copy(crop_iter->name,"Potatoes");
+    crop_iter=crop_iter->next_crop;
+    copy_string(crop_iter->name,"Potatoes");
     crop_iter->mineral_add=4;
     crop_iter->mineral_del=0;
     crop_iter->price=40;
