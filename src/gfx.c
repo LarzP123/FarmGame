@@ -2,12 +2,13 @@
 #define GFX
 
 #include "gfxutils.c"
+#include "initfarmsetup.c"
 
 void * __stdcall CreateThread(void *, unsigned long, unsigned long (__stdcall *)(void *), void *, unsigned long, unsigned long *);
 void __stdcall WaitForSingleObject(void *, unsigned long);
 void __stdcall TerminateThread(void *, unsigned long);
 
-int but_pos[3][4];
+int but_pos[15][4];
 int but_count;
 
 void gui_input_detect_loop(unsigned int* ans) {
@@ -48,6 +49,30 @@ void gui_purchase_items_setup() {
     gfx_draw_string(but_pos[2][0]+10,but_pos[2][1]+10, "3: Sell Farm (+$50)", WHITE);
 
     but_count=3;
+}
+
+void gui_prompt_new_crops_setup(struct crop* crops) {
+    int text_pos;
+    struct crop* crop_iter=crops;
+    if (!gfx_present()) { return; }
+
+    gfx_clear(BLACK);
+
+    but_count=0;
+    but_pos[but_count][1]=50;
+    while (crop_iter!=NULL) {
+        but_pos[but_count][0]=50;but_pos[but_count][2]=170;but_pos[but_count][3]=40;
+        gfx_rect_fill(but_pos[but_count][0],but_pos[but_count][1],but_pos[but_count][2],but_pos[but_count][3],BLUE);
+        gfx_rect(but_pos[but_count][0],but_pos[but_count][1],but_pos[but_count][2],but_pos[but_count][3],WHITE);
+
+        text_pos=gfx_draw_char(but_pos[but_count][0]+10,but_pos[but_count][1]+10, '1'+but_count, WHITE);
+        text_pos=gfx_draw_char(text_pos,but_pos[but_count][1]+10, ':', WHITE);
+        text_pos=gfx_draw_string(text_pos,but_pos[but_count][1]+10, crop_iter->name, WHITE);
+
+        crop_iter=crop_iter->next_crop;
+        but_count++;
+        but_pos[but_count][1]=but_pos[but_count-1][1]+50;
+    }
 }
 
 #endif

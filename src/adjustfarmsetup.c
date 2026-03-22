@@ -6,6 +6,7 @@ extern void read_text(char* buf, int size);
 extern void print_int(int num);
 extern void print_char(char* c);
 extern int text_to_int(char* buf, int* out);
+extern int has_newline(char *buf, int size);
 
 #include "gfx.c"
 #include "initfarmsetup.c"
@@ -85,94 +86,6 @@ int farm_growth_effects(struct farm* farms,struct crop* crops) {
     return money_increase;
 }
 
-void prompt_new_crops(struct farm* farms,struct crop* crops) {
-    struct farm *farm_iter=farms;
-    char buf[10];
-    int num,crop_count=0,i;
-    int valid_num;
-
-    struct crop* crop_iter=crops;
-    while(crop_iter->next_crop!=NULL) {
-        crop_iter=crop_iter->next_crop;
-        crop_count++;
-    }
-
-    while (farm_iter!=NULL) {
-        valid_num=0;
-        while (!valid_num) {
-            print_text("What crop to grow on farm ");
-            print_char(&farm_iter->name);
-            print_text(": ");
-            read_text(buf, sizeof(buf));
-
-            if (text_to_int(buf, &num)!=1) {
-                print_text("Not a number. Try again.\n");
-                continue;
-            }
-            if (num<0) {
-                print_text("Num less than 0, not valid.\n");
-                continue;
-            }
-            if (num>crop_count) {
-                print_text("Num greater than crop count, not valid.\n");
-                continue;
-            }
-
-            crop_iter=crops;
-            for (i=0;i<num;i++) {
-                crop_iter=crop_iter->next_crop;
-            }
-            if (farm_iter->minerals[crop_iter->mineral_del]==0) {
-                print_text("Not enough minerals to grow crop.\n");
-                continue;
-            }
-
-            valid_num=1;
-        }
-        farm_iter->current_crop=num;
-        farm_iter=farm_iter->next_farm;
-    }
-}
-
-void print_farm_minerals(struct farm* farms) {
-    int mineral_n,str_len;
-    struct farm *farm_iter=farms;
-
-    print_text("Minerals:    ");
-    for (mineral_n=0;mineral_n<mineral_count;mineral_n++) {
-        str_len=print_text(mineral_names[mineral_n]);
-        while (str_len++ < 7) print_text(" ");
-    }
-    print_text("\n");
-    while (farm_iter!=NULL) {
-        print_text("Farm");print_char(&farm_iter->name);print_text(":     ");
-        for (mineral_n=0;mineral_n<mineral_count;mineral_n++) {
-            print_text("  ");print_int(farm_iter->minerals[mineral_n]);print_text("0%  ");
-        }
-        farm_iter=farm_iter->next_farm;
-        print_text("\n");
-    }
-}
-
-int expenses_effects(struct farm* farms) {
-    struct farm *farm_iter=farms;
-    int cost_acc=0;
-    while (farm_iter!=NULL) {
-        print_text("Farm ");print_char(&farm_iter->name);print_text(" expenses: $10\n");
-        cost_acc+=10;
-        farm_iter=farm_iter->next_farm;
-    }
-    return cost_acc;
-}
-
-static int has_newline(char *buf, int size) {
-    int i;
-    for (i=0;i<size;i++) {
-        if (buf[i]=='\n') { return 1; }
-    }
-    return 0;
-}
-
 static unsigned long __stdcall prompt_num_async(void* arg) {
     int *verified_ans = (int *)arg;
     int num_ans,text_filled_buffer;
@@ -206,6 +119,80 @@ static unsigned long __stdcall prompt_num_async(void* arg) {
         *verified_ans=num_ans;
     }
     return 0;
+}
+
+void prompt_new_crops(struct farm* farms,struct crop* crops) {
+    void *prompt_thread;
+    struct farm *farm_iter=farms;
+    unsigned int i,ans=0;
+    char base_prompt[] = "What crop to grow on farm _: ";
+
+    struct crop* crop_iter=crops;
+
+    while (farm_iter!=NULL) {
+        ans=0;
+        base_prompt[26]=farm_iter->name;
+        print_text(base_prompt);
+        prompt_thread = CreateThread(0, 0, prompt_num_async, &ans, 0, 0);
+
+        gui_prompt_new_crops_setup(crops);
+
+        while (ans==0) {
+            gui_input_detect_loop(&ans);
+
+            crop_iter=crops;
+            for (i=0;i<ans;i++) {
+                crop_iter=crop_iter->next_crop;
+                if (crop_iter==NULL) {
+                    print_text("Num greater than crop count, not valid.\n");
+                    ans=0;
+                    print_text(base_prompt);
+                    continue;
+                }
+            }
+            if (farm_iter->minerals[crop_iter->mineral_del]==0) {
+                print_text("Not enough minerals to grow crop.\n");
+                ans=0;
+                print_text(base_prompt);
+                continue;
+            }
+        }
+        farm_iter->current_crop=ans;
+        farm_iter=farm_iter->next_farm;
+
+        TerminateThread(prompt_thread, 0);
+    }
+}
+
+void print_farm_minerals(struct farm* farms) {
+    int mineral_n,str_len;
+    struct farm *farm_iter=farms;
+
+    print_text("Minerals:    ");
+    for (mineral_n=0;mineral_n<mineral_count;mineral_n++) {
+        str_len=print_text(mineral_names[mineral_n]);
+        while (str_len++ < 7) print_text(" ");
+    }
+    print_text("\n");
+    while (farm_iter!=NULL) {
+        print_text("Farm");print_char(&farm_iter->name);print_text(":     ");
+        for (mineral_n=0;mineral_n<mineral_count;mineral_n++) {
+            print_text("  ");print_int(farm_iter->minerals[mineral_n]);print_text("0%  ");
+        }
+        farm_iter=farm_iter->next_farm;
+        print_text("\n");
+    }
+}
+
+int expenses_effects(struct farm* farms) {
+    struct farm *farm_iter=farms;
+    int cost_acc=0;
+    while (farm_iter!=NULL) {
+        print_text("Farm ");print_char(&farm_iter->name);print_text(" expenses: $10\n");
+        cost_acc+=10;
+        farm_iter=farm_iter->next_farm;
+    }
+    return cost_acc;
 }
 
 void purchase_items(struct farm** farms,int* money) {

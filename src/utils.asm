@@ -11,6 +11,7 @@ global read_text
 global print_char
 global print_int
 global text_to_int
+global has_newline
 
 ; These live in Kernel32.dll, goes back to early versions of Windows like Windows 95
 extern GetSystemTimeAsFileTime ; gets system time as 64bit val
@@ -533,4 +534,28 @@ text_to_int:
     add     rsp, 40
     pop     rdi
     pop     rbx
+    ret
+
+
+
+has_newline:
+    xor eax, eax            ; i = 0
+
+.loop:
+    cmp eax, edx
+    jge .not_found
+
+    mov r8b, [rcx + rax]    ; use different register
+    cmp r8b, 10
+    je .found
+
+    inc eax
+    jmp .loop
+
+.found:
+    mov eax, 1
+    ret
+
+.not_found:
+    xor eax, eax
     ret
