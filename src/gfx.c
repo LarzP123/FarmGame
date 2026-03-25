@@ -117,9 +117,9 @@ void gui_farm_minerals(struct farm* farm_iter, struct crop* crop_iter,char farm_
             /* bars showing minerals on farm */
             for (n=0;n<MINERALCOUNT;n++) {
                 bar_height=15*(farm_iter->minerals[n]);
-                gfx_rect_hatch(n*20+80,250-bar_height,10,bar_height,GREEN,4);
-                gfx_rect(n*20+80,250-bar_height,10,bar_height,GREEN);
-                gfx_draw_string(n*20+80,252,mineral_names[n],WHITE);
+                gfx_rect_hatch(n*20+80,250-bar_height,10,bar_height,mineral_colors[n],4);
+                gfx_rect(n*20+80,250-bar_height,10,bar_height,mineral_colors[n]);
+                gfx_draw_string(n*20+80,252,mineral_names[n],mineral_colors[n]);
             }
 
             /* outer border and tick marks */
@@ -145,10 +145,10 @@ void gui_farm_minerals(struct farm* farm_iter, struct crop* crop_iter,char farm_
                 }
 
                 gfx_draw_string(gfx_draw_char(450,100+40*n,'^', WHITE)
-                    ,100+40*n,mineral_names[crop_iter->mineral_add],WHITE);
+                    ,100+40*n,mineral_names[crop_iter->mineral_add],mineral_colors[crop_iter->mineral_add]);
 
                 gfx_draw_string(gfx_draw_char(500,100+40*n,'v', WHITE)
-                    ,100+40*n,mineral_names[crop_iter->mineral_del],WHITE);
+                    ,100+40*n,mineral_names[crop_iter->mineral_del],mineral_colors[crop_iter->mineral_del]);
 
                 int_to_str(crop_iter->price, num_buf);
                 gfx_draw_string(gfx_draw_char(550,100+40*n,'$', WHITE)
