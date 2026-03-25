@@ -162,14 +162,14 @@ void prompt_new_crops(struct farm* farms,struct crop* crops) {
             for (i=1;i<ans;i++) {
                 crop_iter=crop_iter->next_crop;
                 if (crop_iter==NULL) {
-                    print_text("Num greater than crop count, not valid.\n");
+                    feedback_update("Num greater than crop count, not valid.\n");
                     ans=0;
                     print_text(base_prompt);
                     break;
                 }
             }
             if (farm_iter->minerals[crop_iter->mineral_del]==0) {
-                print_text("Not enough minerals to grow crop.\n");
+                feedback_update("Not enough minerals to grow crop.\n");
                 ans=0;
                 print_text(base_prompt);
                 continue;
@@ -235,7 +235,7 @@ void purchase_items(struct farm** farms,int* money) {
             case 1: { break; }
             case 2: {
                 if(*money<50) {
-                    print_text("Do not have enough money ($50).\n");
+                    feedback_update("Do not have enough money ($50).\n");
                     ans=0;
                     print_text(base_prompt);
                     continue;
@@ -248,7 +248,7 @@ void purchase_items(struct farm** farms,int* money) {
             }
             case 3: {
                 if((*farms)->next_farm==NULL) {
-                    print_text("You only have one farm, there are no excess to sell.\n");
+                    feedback_update("You only have one farm, there are no excess to sell.\n");
                     ans=0;
                     print_text(base_prompt);
                     continue;
@@ -260,7 +260,7 @@ void purchase_items(struct farm** farms,int* money) {
                 break;
             }
             default: {
-                print_text("Num too large.\n");
+                feedback_update("Num too large.\n");
                 ans=0;
                 print_text(base_prompt);
                 continue;

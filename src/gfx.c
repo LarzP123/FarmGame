@@ -95,6 +95,13 @@ void gui_basic_utils(int money, int year) {
     text_pos=gfx_draw_string(text_pos,5,num_buf,WHITE);
 }
 
+void feedback_update(char* string) {
+    print_text(string);
+    if (!gfx_present()) { return; }
+    gfx_clear(580);
+    gfx_draw_string(gfx_draw_string(10,580,"Invalid Input:",RED),580,string,RED);
+}
+
 void gui_farm_minerals(struct farm* farm_iter, struct crop* crop_iter,char farm_select,char farm_view) {
     char full_farm_name[] = "Farm _";
     int button_x=20,n,bar_height;
@@ -132,7 +139,7 @@ void gui_farm_minerals(struct farm* farm_iter, struct crop* crop_iter,char farm_
             gfx_draw_string(550,90,"Price:",WHITE);
             while (crop_iter!=NULL) {
                 if (farm_select==farm_view) {
-                    add_button(300,100+40*n,100,20,crop_iter->name,n,0,0);
+                    add_button(300,100+40*n,100,20,crop_iter->name,n+1,0,0);
                 } else {
                     gfx_draw_string(300,100+40*n,crop_iter->name,WHITE);
                 }
