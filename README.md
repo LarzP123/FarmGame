@@ -7,6 +7,10 @@ Possible additions may be purchasing/selling of farms or random encounters
 
 Ideally all gameplay should be do-able and user friendly within the terminal, however graphics.h Borland Graphics interface could also be used
 
+![Sample Image of Menu to Buy/Sell Farms](sampleimages/BuyFarm.PNG)
+
+![Sampe Image of Menu to Choose Crop to Plant on a Farm](sampleimages/ChooseCrop.PNG)
+
 # Design Notes
 
 ### Most of this is bad for big projects, but is fun to do here
