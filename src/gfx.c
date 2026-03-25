@@ -10,73 +10,82 @@ void * __stdcall CreateThread(void *, unsigned long, unsigned long (__stdcall *)
 void __stdcall WaitForSingleObject(void *, unsigned long);
 void __stdcall TerminateThread(void *, unsigned long);
 
-int but_pos[15][4];
-int but_count;
+struct button {
+    int left_x,top_y,right_x,bot_y;
+    struct button* next_button;
+    int user_input;
+};
 
-void gui_input_detect_loop(unsigned int* ans) {
-    int button_iter;
-    if (!gfx_present()) { return; }
+struct button* but_iter = NULL; /* circular linked list */
 
-    if (mouse_x_click==0 && mouse_y_click==0) { return; }
-
-    for (button_iter=0;button_iter<but_count;button_iter++) {
-        if (click_in_rect(but_pos[button_iter][0],but_pos[button_iter][1],but_pos[button_iter][2],but_pos[button_iter][3])) {
-            print_int(button_iter+1);print_text("\n");
-            *ans = button_iter+1;
-            mouse_x_click=mouse_y_click=0;
-            return;
+static unsigned long __stdcall button_detect_async(void* arg) {
+    int *ans = (int *)arg;
+    while (1) {
+        if (click_x>but_iter->left_x&&click_x<but_iter->right_x&&click_y>but_iter->top_y&&click_y<but_iter->bot_y) {
+            *ans = but_iter->user_input;
+            click_x=click_y=0;
+            continue;
         }
+        but_iter = but_iter->next_button;
     }
+    return 1;
+}
 
-    mouse_x_click=mouse_y_click=0;
-    return;
+void add_button(int set_left_x,int set_top_y,int set_width,int set_height,char* set_text,int set_user_input) {
+    int text_pos;char num_buf[12];
+    struct button* prev_but_iter = but_iter;
+
+    but_iter = mem_alloc(sizeof(struct button));
+    if (prev_but_iter == NULL) {
+        but_iter->next_button = but_iter;
+    } else {
+        but_iter->next_button = prev_but_iter->next_button;
+        prev_but_iter->next_button = but_iter;
+    }
+    but_iter->user_input=set_user_input;
+    but_iter->left_x=set_left_x;
+    but_iter->top_y=set_top_y;
+    but_iter->right_x=set_left_x+set_width;
+    but_iter->bot_y=set_top_y+set_height;
+    gfx_rect_fill(set_left_x,set_top_y,set_width,set_height,BLUE);
+    gfx_rect(set_left_x,set_top_y,set_width,set_height,WHITE);
+
+    int_to_str(set_user_input, num_buf);
+    text_pos=gfx_draw_string(set_left_x+10,set_top_y+10, num_buf, WHITE);
+    text_pos=gfx_draw_char(text_pos,set_top_y+10, ':', WHITE);
+    text_pos=gfx_draw_string(text_pos,set_top_y+10, set_text, WHITE);
+}
+
+void free_buttons() {
+    struct button *but_head = but_iter;
+    struct button *next;
+    do {
+        next = but_iter->next_button;
+        mem_free(but_iter);
+        but_iter = next;
+    } while (but_iter != but_head);
+    but_iter = NULL;
 }
 
 void gui_purchase_items_setup() {
     if (!gfx_present()) { return; }
     gfx_clear(BLACK);
 
-    but_pos[0][0]=50;but_pos[0][1]=50;but_pos[0][2]=200;but_pos[0][3]=40;
-    gfx_rect_fill(but_pos[0][0],but_pos[0][1],but_pos[0][2],but_pos[0][3],BLUE);
-    gfx_rect(but_pos[0][0],but_pos[0][1],but_pos[0][2],but_pos[0][3],WHITE);
-    gfx_draw_string(but_pos[0][0]+10,but_pos[0][1]+10, "1: Do Nothing", WHITE);
-
-    but_pos[1][0]=50;but_pos[1][1]=100;but_pos[1][2]=200;but_pos[1][3]=40;
-    gfx_rect_fill(but_pos[1][0],but_pos[1][1],but_pos[1][2],but_pos[1][3],BLUE);
-    gfx_rect(but_pos[1][0],but_pos[1][1],but_pos[1][2],but_pos[1][3],WHITE);
-    gfx_draw_string(but_pos[1][0]+10,but_pos[1][1]+10, "2: Buy Farm (-$50)", WHITE);
-
-    but_pos[2][0]=50;but_pos[2][1]=150;but_pos[2][2]=200;but_pos[2][3]=40;
-    gfx_rect_fill(but_pos[2][0],but_pos[2][1],but_pos[2][2],but_pos[2][3],BLUE);
-    gfx_rect(but_pos[2][0],but_pos[2][1],but_pos[2][2],but_pos[2][3],WHITE);
-    gfx_draw_string(but_pos[2][0]+10,but_pos[2][1]+10, "3: Sell Farm (+$50)", WHITE);
-
-    but_count=3;
+    add_button(50, 50,200,40,"Do Nothing",1);
+    add_button(50,100,200,40,"Buy Farm (-$50)",2);
+    add_button(50,150,200,40,"Sell Farm (+$50)",3);
 }
 
 void gui_prompt_new_crops_setup(struct crop* crops) {
-    char num_buf[12];
-    int text_pos;
-    struct crop* crop_iter=crops;
+    int button_y=50,crop_num=1;
     if (!gfx_present()) { return; }
-
     gfx_clear(BLACK);
 
-    but_count=0;
-    but_pos[but_count][1]=50;
-    while (crop_iter!=NULL) {
-        but_pos[but_count][0]=50;but_pos[but_count][2]=170;but_pos[but_count][3]=40;
-        gfx_rect_fill(but_pos[but_count][0],but_pos[but_count][1],but_pos[but_count][2],but_pos[but_count][3],BLUE);
-        gfx_rect(but_pos[but_count][0],but_pos[but_count][1],but_pos[but_count][2],but_pos[but_count][3],WHITE);
+    while (crops!=NULL) {
+        add_button(50,button_y,200,40,crops->name,crop_num);
 
-        int_to_str(but_count+1, num_buf);
-        text_pos=gfx_draw_string(but_pos[but_count][0]+10,but_pos[but_count][1]+10, num_buf, WHITE);
-        text_pos=gfx_draw_char(text_pos,but_pos[but_count][1]+10, ':', WHITE);
-        text_pos=gfx_draw_string(text_pos,but_pos[but_count][1]+10, crop_iter->name, WHITE);
-
-        crop_iter=crop_iter->next_crop;
-        but_count++;
-        but_pos[but_count][1]=but_pos[but_count-1][1]+50;
+        crops=crops->next_crop;
+        button_y+=50;crop_num++;
     }
 }
 

@@ -132,7 +132,7 @@ static unsigned long __stdcall prompt_num_async(void* arg) {
 }
 
 void prompt_new_crops(struct farm* farms,struct crop* crops) {
-    void *prompt_thread;
+    void *prompt_thread,*button_thread;
     struct farm *farm_iter=farms;
     unsigned int i,ans=0;
     char base_prompt[] = "What crop to grow on farm _ (Crop ID): ";
@@ -143,12 +143,14 @@ void prompt_new_crops(struct farm* farms,struct crop* crops) {
         ans=0;
         base_prompt[26]=farm_iter->name;
         print_text(base_prompt);
-        prompt_thread = CreateThread(0, 0, prompt_num_async, &ans, 0, 0);
 
         gui_prompt_new_crops_setup(crops);
 
+        prompt_thread = CreateThread(0, 0, prompt_num_async, &ans, 0, 0);
+        button_thread = CreateThread(0, 0, button_detect_async, &ans, 0, 0);
+
         while (ans==0) {
-            gui_input_detect_loop(&ans);
+            gfx_present();
 
             crop_iter=crops;
             for (i=1;i<ans;i++) {
@@ -172,6 +174,8 @@ void prompt_new_crops(struct farm* farms,struct crop* crops) {
         farm_iter=farm_iter->next_farm;
 
         TerminateThread(prompt_thread, 0);
+        TerminateThread(button_thread, 0);
+        free_buttons();
     }
 }
 
@@ -207,7 +211,7 @@ int expenses_effects(struct farm* farms) {
 }
 
 void purchase_items(struct farm** farms,int* money) {
-    void *prompt_thread;
+    void *prompt_thread, *button_thread;
     unsigned int ans=0;
     char* base_prompt = "1-Do Nothing, 2-Purchase Farm(-$50), 3-Sell Farm(+$50). What do: ";
     print_text("Money: $");print_int(*money);print_text("\n");
@@ -216,9 +220,10 @@ void purchase_items(struct farm** farms,int* money) {
 
     print_text(base_prompt);
     prompt_thread = CreateThread(0, 0, prompt_num_async, &ans, 0, 0);
+    button_thread = CreateThread(0, 0, button_detect_async, &ans, 0, 0);
 
     while (ans==0) {
-        gui_input_detect_loop(&ans);
+        gfx_present();
 
         switch (ans) {
             case 0: { break; } /* no answer given yet. Keep looping */
@@ -259,6 +264,8 @@ void purchase_items(struct farm** farms,int* money) {
     }
 
     TerminateThread(prompt_thread, 0);
+    TerminateThread(button_thread, 0);
+    free_buttons();
 }
 
 #endif

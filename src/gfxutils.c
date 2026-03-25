@@ -101,8 +101,8 @@ static void *g_memdc=0;
 static struct bitmap_info g_bmi;
 static int g_running=1;
 
-static int mouse_x_click=0;
-static int mouse_y_click=0;
+static int click_x=0;
+static int click_y=0;
 
 /* window procedure */
 typedef void * (__stdcall *WNDPROC)(void*, unsigned int, void*, void*);
@@ -123,8 +123,8 @@ static void * __stdcall wnd_proc(void *hwnd, unsigned int msg, void *wp, void *l
         }
         case 0x0201: { /* WM_LBUTTONDOWN */
             unsigned char *lp_char = (unsigned char *)&lp;
-            mouse_x_click = (short)(lp_char[0] | (lp_char[1] << 8));
-            mouse_y_click = (short)(lp_char[2] | (lp_char[3] << 8));
+            click_x = (short)(lp_char[0] | (lp_char[1] << 8));
+            click_y = (short)(lp_char[2] | (lp_char[3] << 8));
 
             return 0;
         }
@@ -228,20 +228,6 @@ void gfx_vline(int x,int y_0,int y_1,unsigned int color) {
     while (pixel_iter--) { *pixel=color;pixel+=SCREEN_W; }
 }
 
-/* Bresenham's line algorithm */
-void gfx_line(int x_0,int y_0,int x_1,int y_1,unsigned int color) {
-    int dist_x=+abs_val(x_1-x_0),dir_x=x_0<x_1?1:-1;
-    int dist_y=-abs_val(y_1-y_0),dir_y=y_0<y_1?1:-1;
-    int double_acc_err,acc_err=dist_x+dist_y;
-    while (1) {
-        gfx_put_pixel(x_0,y_0,color);
-        if (x_0==x_1&&y_0==y_1) { break; }
-        double_acc_err=2*acc_err;
-        if (double_acc_err>= dist_y) { acc_err+=dist_y;x_0+=dir_x; }
-        if (double_acc_err<= dist_x) { acc_err+=dist_x;y_0+=dir_y; }
-    }
-}
-
 void gfx_rect(int left_x,int top_y,int width,int height,unsigned int color) {
     gfx_hline(left_x,left_x+width-1,top_y,color); /* top */
     gfx_hline(left_x,left_x+width-1,top_y+height-1,color); /* bottom */
@@ -249,54 +235,10 @@ void gfx_rect(int left_x,int top_y,int width,int height,unsigned int color) {
     gfx_vline(left_x+width-1,top_y,top_y+height-1,color); /* right */
 }
 
-int click_in_rect(int left_x,int top_y,int width,int height) {
-    if(mouse_x_click>left_x && mouse_x_click<left_x+width &&
-       mouse_y_click>top_y && mouse_y_click <top_y+height) {
-        return 1;
-    }
-    return 0;
-}
-
 void gfx_rect_fill(int left_x,int top_y,int width,int height,unsigned int color) {
     int row;
     for (row=top_y;row<top_y+height;row++) {
         gfx_hline(left_x,left_x+width-1,row,color);
-    }
-}
-
-void gfx_circle(int center_x,int center_y,int radius,unsigned int color) {
-    int x_iter=0,y_iter=radius,midpoint_outside_circle=1-radius;
-    while (x_iter<=y_iter) {
-        gfx_put_pixel(center_x+x_iter,center_y+y_iter,color); /* bottom bottom right 8th */
-        gfx_put_pixel(center_x-x_iter,center_y+y_iter,color); /* bottom bottom left 8th */
-        gfx_put_pixel(center_x+x_iter,center_y-y_iter,color); /* top top right 8th */
-        gfx_put_pixel(center_x-x_iter,center_y-y_iter,color); /* top top left 8th */
-        gfx_put_pixel(center_x+y_iter,center_y+x_iter,color); /* bottom right right 8th */
-        gfx_put_pixel(center_x-y_iter,center_y+x_iter,color); /* bottom left left 8th */
-        gfx_put_pixel(center_x+y_iter,center_y-x_iter,color); /* top right right 8th */
-        gfx_put_pixel(center_x-y_iter,center_y-x_iter,color); /* top left left 8th */
-        if (midpoint_outside_circle<0) {
-            midpoint_outside_circle+=2*x_iter+3;
-        } else {
-            midpoint_outside_circle+=2*(x_iter-y_iter)+5;y_iter--;
-        }
-        x_iter++;
-    }
-}
-
-void gfx_circle_fill(int center_x,int center_y,int radius,unsigned int color) {
-    int x_iter=0,y_iter=radius,midpoint_outside_circle=1-radius;
-    while (x_iter<=y_iter) {
-        gfx_hline(center_x-x_iter,center_x+x_iter,center_y+y_iter,color); /* bottom 4th */
-        gfx_hline(center_x-x_iter,center_x+x_iter,center_y-y_iter,color); /* top 4th */
-        gfx_hline(center_x-y_iter,center_x+y_iter,center_y+x_iter,color); /* center bottom 4th */
-        gfx_hline(center_x-y_iter,center_x+y_iter,center_y-x_iter,color); /* center top 4th */
-        if (midpoint_outside_circle<0) {
-            midpoint_outside_circle+=2*x_iter+3;
-        } else {
-            midpoint_outside_circle+=2*(x_iter-y_iter)+5;y_iter--;
-        }
-        x_iter++;
     }
 }
 
