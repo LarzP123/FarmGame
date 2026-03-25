@@ -242,6 +242,20 @@ void gfx_rect_fill(int left_x,int top_y,int width,int height,unsigned int color)
     }
 }
 
+void gfx_rect_hatch(int left_x,int top_y,int width,int height,unsigned int color,int spacing) {
+    int x_iter, y_iter;
+
+    for (y_iter = 0; y_iter < height; y_iter++) {
+        for (x_iter = 0; x_iter < width; x_iter++) {
+
+            /* diagonal pattern */
+            if (((x_iter + y_iter) % spacing) == 0) {
+                gfx_put_pixel(left_x + x_iter, top_y + y_iter, color);
+            }
+        }
+    }
+}
+
 int gfx_draw_char(int char_x,int char_y,char char_in,unsigned int color) {
     int x_iter,y_iter,char_index=(unsigned char)char_in-32;
     unsigned char char_bitmap;

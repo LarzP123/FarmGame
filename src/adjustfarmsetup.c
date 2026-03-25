@@ -144,7 +144,7 @@ void prompt_new_crops(struct farm* farms,struct crop* crops) {
         base_prompt[26]=farm_iter->name;
         print_text(base_prompt);
 
-        gui_prompt_new_crops_setup(crops);
+        gui_farm_minerals(farms, crops,farm_iter->name,farm_iter->name);
 
         prompt_thread = CreateThread(0, 0, prompt_num_async, &ans, 0, 0);
         button_thread = CreateThread(0, 0, button_detect_async, &ans, 0, 0);
@@ -184,14 +184,14 @@ void print_farm_minerals(struct farm* farms) {
     struct farm *farm_iter=farms;
 
     print_text("Minerals:    ");
-    for (mineral_n=0;mineral_n<mineral_count;mineral_n++) {
+    for (mineral_n=0;mineral_n<MINERALCOUNT;mineral_n++) {
         str_len=print_text(mineral_names[mineral_n]);
         while (str_len++ < 7) print_text(" ");
     }
     print_text("\n");
     while (farm_iter!=NULL) {
         print_text("Farm");print_char(&farm_iter->name);print_text(":     ");
-        for (mineral_n=0;mineral_n<mineral_count;mineral_n++) {
+        for (mineral_n=0;mineral_n<MINERALCOUNT;mineral_n++) {
             print_text("  ");print_int(farm_iter->minerals[mineral_n]);print_text("0%  ");
         }
         farm_iter=farm_iter->next_farm;
