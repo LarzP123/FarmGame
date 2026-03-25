@@ -134,7 +134,7 @@ static unsigned long __stdcall prompt_num_async(void* arg) {
 void prompt_new_crops(struct farm* farms,struct crop* crops) {
     void *prompt_thread,*button_thread;
     struct farm *farm_iter=farms;
-    unsigned int i,ans=0;
+    int i,ans=0;
     char base_prompt[] = "What crop to grow on farm _ (Crop ID): ";
 
     struct crop* crop_iter=crops;
@@ -151,8 +151,14 @@ void prompt_new_crops(struct farm* farms,struct crop* crops) {
 
         while (ans==0) {
             gfx_present();
+            if (ans == 0) { continue; } /* skip mineral check if crop was invalid */
 
             crop_iter=crops;
+            if (ans<0) { /* GUI Selection to look at other farm info, but no action */
+                gui_farm_minerals(farms,crops,farm_iter->name,-ans);
+                ans=0;
+                continue;
+            }
             for (i=1;i<ans;i++) {
                 crop_iter=crop_iter->next_crop;
                 if (crop_iter==NULL) {
@@ -162,7 +168,6 @@ void prompt_new_crops(struct farm* farms,struct crop* crops) {
                     break;
                 }
             }
-            if (ans == 0) { continue; } /* skip mineral check if crop was invalid */
             if (farm_iter->minerals[crop_iter->mineral_del]==0) {
                 print_text("Not enough minerals to grow crop.\n");
                 ans=0;
@@ -212,7 +217,7 @@ int expenses_effects(struct farm* farms) {
 
 void purchase_items(struct farm** farms,int* money) {
     void *prompt_thread, *button_thread;
-    unsigned int ans=0;
+    int ans=0;
     char* base_prompt = "1-Do Nothing, 2-Purchase Farm(-$50), 3-Sell Farm(+$50). What do: ";
     print_text("Money: $");print_int(*money);print_text("\n");
 

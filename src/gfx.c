@@ -23,8 +23,10 @@ static unsigned long __stdcall button_detect_async(void* arg) {
     if (but_iter == NULL) { return 0; } /* they closed the GUI */
     while (1) {
         if (click_x>but_iter->left_x&&click_x<but_iter->right_x&&click_y>but_iter->top_y&&click_y<but_iter->bot_y) {
-            print_int(but_iter->user_input);
-            print_text("\n");
+            if (but_iter->user_input>=0) {
+                print_int(but_iter->user_input);
+                print_text("\n");
+            }
             *ans = but_iter->user_input;
             click_x=click_y=0;
         }
@@ -32,7 +34,7 @@ static unsigned long __stdcall button_detect_async(void* arg) {
     }
 }
 
-void add_button(int set_left_x,int set_top_y,int set_width,int set_height,char* set_text,int set_user_input,int is_char) {
+void add_button(int set_left_x,int set_top_y,int set_width,int set_height,char* set_text,int set_user_input,int is_char,int selected) {
     int text_pos;char num_buf[10];
     struct button* prev_but_iter = but_iter;
 
@@ -45,21 +47,22 @@ void add_button(int set_left_x,int set_top_y,int set_width,int set_height,char* 
         but_iter->next_button = prev_but_iter->next_button;
         prev_but_iter->next_button = but_iter;
     }
-    but_iter->user_input=set_user_input;
     but_iter->left_x=set_left_x;
     but_iter->top_y=set_top_y;
     but_iter->right_x=set_left_x+set_width;
     but_iter->bot_y=set_top_y+set_height;
 
     if (is_char) {
+        but_iter->user_input=-set_user_input;
         gfx_rect_fill(set_left_x,set_top_y,set_width,set_height,RED);
         text_pos=gfx_draw_char(set_left_x+10,set_top_y+10, set_user_input, WHITE);
     } else {
+        but_iter->user_input=set_user_input;
         gfx_rect_fill(set_left_x,set_top_y,set_width,set_height,BLUE);
         int_to_str(set_user_input, num_buf);
         text_pos=gfx_draw_string(set_left_x+10,set_top_y+10, num_buf, WHITE);
     }
-    gfx_rect(set_left_x,set_top_y,set_width,set_height,WHITE);
+    gfx_rect(set_left_x,set_top_y,set_width,set_height,selected?YELLOW:WHITE);
     text_pos=gfx_draw_char(text_pos,set_top_y+10, ':', WHITE);
     text_pos=gfx_draw_string(text_pos,set_top_y+10, set_text, WHITE);
 }
@@ -123,19 +126,23 @@ void gui_farm_minerals(struct farm* farm_iter, struct crop* crop_iter,char farm_
 
             /* Crop Info Table */
             n=0;
+            gfx_draw_string(300,90,farm_select==farm_view?"Choose to Plant:":"Crop Name:",WHITE);
+            gfx_draw_string(450,90,"Add:",WHITE);
+            gfx_draw_string(500,90,"Del:",WHITE);
+            gfx_draw_string(550,90,"Price:",WHITE);
             while (crop_iter!=NULL) {
-                gfx_draw_string(300,90,"Choose to Plant:",WHITE);
-                add_button(300,100+40*n,100,20,crop_iter->name,n,0);
+                if (farm_select==farm_view) {
+                    add_button(300,100+40*n,100,20,crop_iter->name,n,0,0);
+                } else {
+                    gfx_draw_string(300,100+40*n,crop_iter->name,WHITE);
+                }
 
-                gfx_draw_string(450,90,"Add:",WHITE);
                 gfx_draw_string(gfx_draw_char(450,100+40*n,'^', WHITE)
                     ,100+40*n,mineral_names[crop_iter->mineral_add],WHITE);
 
-                gfx_draw_string(500,90,"Del:",WHITE);
                 gfx_draw_string(gfx_draw_char(500,100+40*n,'v', WHITE)
                     ,100+40*n,mineral_names[crop_iter->mineral_del],WHITE);
 
-                gfx_draw_string(550,90,"Price:",WHITE);
                 int_to_str(crop_iter->price, num_buf);
                 gfx_draw_string(gfx_draw_char(550,100+40*n,'$', WHITE)
                     ,100+40*n,num_buf,WHITE);
@@ -146,7 +153,7 @@ void gui_farm_minerals(struct farm* farm_iter, struct crop* crop_iter,char farm_
         }
 
         full_farm_name[5]=farm_iter->name;
-        add_button(button_x,40,100,30,full_farm_name,farm_iter->name,1);
+        add_button(button_x,40,100,30,full_farm_name,farm_iter->name,1,farm_iter->name==farm_view);
 
         farm_iter=farm_iter->next_farm;
         button_x+=100;
@@ -157,9 +164,9 @@ void gui_purchase_items_setup() {
     if (!gfx_present()) { return; }
     gfx_clear(15);
 
-    add_button(50, 50,200,40,"Do Nothing",1,0);
-    add_button(50,100,200,40,"Buy Farm (-$50)",2,0);
-    add_button(50,150,200,40,"Sell Farm (+$50)",3,0);
+    add_button(50, 50,200,40,"Do Nothing",1,0,0);
+    add_button(50,100,200,40,"Buy Farm (-$50)",2,0,0);
+    add_button(50,150,200,40,"Sell Farm (+$50)",3,0,0);
 }
 
 #endif
