@@ -37,7 +37,7 @@ If you don't know how to download the file from the releases page, you can also 
 ```powershell
 $release = Invoke-RestMethod "https://api.github.com/repos/LarzP123/FarmGame/releases/latest"
 $asset = $release.assets | Where-Object { $_.name -like "*.exe" } | Select-Object -First 1
-$outPath = Join-Path [Environment]::GetFolderPath("Desktop") $asset.name
+$outPath = Join-Path -Path ([Environment]::GetFolderPath("Desktop")) -ChildPath $asset.name
 
 Invoke-WebRequest $asset.browser_download_url -OutFile $outPath
 
