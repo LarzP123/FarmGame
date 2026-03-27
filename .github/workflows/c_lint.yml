@@ -1,0 +1,34 @@
+name: C Linter
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "src/**/*.c"
+      - "src/**/*.h"
+      - ".github/linter/c_linter.py"
+      - ".github/workflows/c_lint.yml"
+  pull_request:
+    branches: ["**"]
+    paths:
+      - "src/**/*.c"
+      - "src/**/*.h"
+      - ".github/linter/c_linter.py"
+      - ".github/workflows/c_lint.yml"
+
+jobs:
+  lint:
+    name: Lint C sources
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Run C linter
+        run: python .github/linter/c_linter.py src/

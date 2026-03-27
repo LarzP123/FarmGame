@@ -4,19 +4,19 @@
 #include "charbitmap.c"
 
 /* screen */
-#define SCREEN_W 800
-#define SCREEN_H 600
+#define SCREENW 800
+#define SCREENH 600
 
 /* color */
-#define COL_RGB(r,g,b) ((unsigned int)(((r)<<16)|((g)<<8)|(b)))
-#define BLACK   COL_RGB(0  ,0  ,0  )
-#define WHITE   COL_RGB(255,255,255)
-#define RED     COL_RGB(255,0  ,0  )
-#define GREEN   COL_RGB(0  ,255,0  )
-#define BLUE    COL_RGB(0  ,0  ,255)
-#define YELLOW  COL_RGB(255,255,0  )
-#define CYAN    COL_RGB(0  ,255,255)
-#define MAGENTA COL_RGB(255,0  ,255)
+#define COLRGB(r,g,b) ((unsigned int)(((r)<<16)|((g)<<8)|(b)))
+#define BLACK   COLRGB(0  ,0  ,0  )
+#define WHITE   COLRGB(255,255,255)
+#define RED     COLRGB(255,0  ,0  )
+#define GREEN   COLRGB(0  ,255,0  )
+#define BLUE    COLRGB(0  ,0  ,255)
+#define YELLOW  COLRGB(255,255,0  )
+#define CYAN    COLRGB(0  ,255,255)
+#define MAGENTA COLRGB(255,0  ,255)
 
 /* Win32 structs */
 struct wind_class { /* WNDCLASSEXA */
@@ -43,7 +43,7 @@ struct bitmap_info_header { /* BITMAPINFOHEADER */
     unsigned short bi_planes;
     unsigned short bi_bit_count;
     unsigned int bi_compression;
-    unsigned int bi_sizeImage;
+    unsigned int bi_size_image;
     int bi_x_pels_per_meter;
     int bi_y_pels_per_meter;
     unsigned int bi_clr_used;
@@ -52,14 +52,14 @@ struct bitmap_info_header { /* BITMAPINFOHEADER */
 
 struct bitmap_info { /* BITMAPINFO */
     struct bitmap_info_header bmi_header;
-    unsigned int bmiColors[1];
+    unsigned int bmi_colors[1];
 };
 
 struct winuser_thread_msg { /* MSG */
     void         *hwnd;
     unsigned int  message;
     unsigned int  pad;
-    void         *w_Param;
+    void         *w_param;
     void         *l_param;
     unsigned int  time;
     int           pt_x;
@@ -105,35 +105,33 @@ static int click_x=0;
 static int click_y=0;
 
 /* window procedure */
-typedef void * (__stdcall *WNDPROC)(void*, unsigned int, void*, void*);
-
-static void * __stdcall wnd_proc(void *hwnd, unsigned int msg, void *wp, void *lp) {
+static void * __stdcall wnd_proc(void *hwnd,unsigned int msg,void *wp,void *lp) {
     switch (msg) {
         case 0x0002: { /* VM_DESTROY */
-            g_running = 0;
+            g_running=0;
             PostQuitMessage(0);
             return 0;
         }
         case 0x0100: { /* VM_KEYDOWN */
-            if (wp == (void *)0x1B) { /* VK_ESCAPE */
-                g_running = 0;
+            if (wp==(void *)0x1B) { /* VK_ESCAPE */
+                g_running=0;
                 DestroyWindow(hwnd);
             }
             return 0;
         }
         case 0x0201: { /* WM_LBUTTONDOWN */
-            unsigned char *lp_char = (unsigned char *)&lp;
-            click_x = (short)(lp_char[0] | (lp_char[1] << 8));
-            click_y = (short)(lp_char[2] | (lp_char[3] << 8));
+            unsigned char *lp_char=(unsigned char *)&lp;
+            click_x=(short)(lp_char[0]|(lp_char[1]<<8));
+            click_y=(short)(lp_char[2]|(lp_char[3]<<8));
 
             return 0;
         }
     }
-    return DefWindowProcA(hwnd, msg, wp, lp);
+    return DefWindowProcA(hwnd,msg,wp,lp);
 }
 
 void gfx_clear(int height_start) {
-    mem_set(frame_buffer+SCREEN_W*height_start,0,4*SCREEN_W*(SCREEN_H-height_start));
+    mem_set(frame_buffer+SCREENW*height_start,0,4*SCREENW*(SCREENH-height_start));
 }
 
 /* init/shutdown */
@@ -141,7 +139,10 @@ int gfx_init(const char *title) {
     struct wind_class wind_class_inst;
     struct rect window_rect;
     void *bits;
-    union { WNDPROC fn;void *ptr; } proc_cast;
+    union {
+        void *(__stdcall *fn)(void*,unsigned int,void*,void*);
+        void *ptr;
+    } proc_cast;
 
     mem_set(&wind_class_inst,0,sizeof(struct wind_class));
     wind_class_inst.cb_size=sizeof(struct wind_class);
@@ -153,14 +154,14 @@ int gfx_init(const char *title) {
     wind_class_inst.lpsz_class_name="GfxWnd";
     RegisterClassExA(&wind_class_inst);
 
-    window_rect.left=0;window_rect.top=0;window_rect.right=SCREEN_W;window_rect.bottom=SCREEN_H;
+    window_rect.left=0;window_rect.top=0;window_rect.right=SCREENW;window_rect.bottom=SCREENH;
     AdjustWindowRect(&window_rect,0x00CF0000,0); /* WS_OVERLAPPEDWINDOW */
 
     g_hwnd=CreateWindowExA(
         0,"GfxWnd",title,
-        0x10CF0000,((int)0x80000000),((int)0x80000000), /* WS_OVERLAPPEDWINDOW&WS_VISIBLE, CW_USEDEFAULT */
+        0x10CF0000,((int)0x80000000),((int)0x80000000),/* WS_OVERLAPPEDWINDOW&WS_VISIBLE, CW_USEDEFAULT */
         window_rect.right-window_rect.left,window_rect.bottom-window_rect.top,
-        0, 0, GetModuleHandleA(0), 0
+        0,0,GetModuleHandleA(0),0
     );
     if (!g_hwnd) { return 0; }
 
@@ -169,8 +170,8 @@ int gfx_init(const char *title) {
 
     mem_set(&g_bmi,0,sizeof(g_bmi));
     g_bmi.bmi_header.bi_size=sizeof(struct bitmap_info_header);
-    g_bmi.bmi_header.bi_width=SCREEN_W;
-    g_bmi.bmi_header.bi_height=-SCREEN_H;
+    g_bmi.bmi_header.bi_width=SCREENW;
+    g_bmi.bmi_header.bi_height=-SCREENH;
     g_bmi.bmi_header.bi_planes=1;
     g_bmi.bmi_header.bi_bit_count=32;
     g_bmi.bmi_header.bi_compression=0;
@@ -198,21 +199,21 @@ int gfx_present(void) {
         TranslateMessage(&msg);
         DispatchMessageA(&msg);
     }
-    BitBlt(g_hdc,0,0,SCREEN_W,SCREEN_H,g_memdc,0,0,0x00CC0020); /* SRCCOPY */
+    BitBlt(g_hdc,0,0,SCREENW,SCREENH,g_memdc,0,0,0x00CC0020); /* SRCCOPY */
     return g_running;
 }
 
 void gfx_put_pixel(int x,int y,unsigned int color) {
-    frame_buffer[y*SCREEN_W+x]=color;
+    frame_buffer[y*SCREENW+x]=color;
 }
 
 void gfx_hline(int x_0,int x_1,int y,unsigned int color) {
     unsigned int *pixel;
     int pixel_iter;
-    if ((unsigned int)y>=SCREEN_H) { return; }
+    if ((unsigned int)y>=SCREENH) { return; }
     if (x_0<0) { x_0=0; }
-    if (x_1>=SCREEN_W) { x_1=SCREEN_W-1; }
-    pixel=frame_buffer+y*SCREEN_W+x_0;
+    if (x_1>=SCREENW) { x_1=SCREENW-1; }
+    pixel=frame_buffer+y*SCREENW+x_0;
     pixel_iter=x_1-x_0+1;
     while (pixel_iter--) { *pixel++=color; }
 }
@@ -220,12 +221,12 @@ void gfx_hline(int x_0,int x_1,int y,unsigned int color) {
 void gfx_vline(int x,int y_0,int y_1,unsigned int color) {
     unsigned int *pixel;
     int pixel_iter;
-    if ((unsigned int)x >= SCREEN_W) { return; }
+    if ((unsigned int)x >= SCREENW) { return; }
     if (y_0<0) { y_0=0; }
-    if (y_1>=SCREEN_H) { y_1=SCREEN_H-1; }
-    pixel=frame_buffer+y_0*SCREEN_W+x;
+    if (y_1>=SCREENH) { y_1=SCREENH-1; }
+    pixel=frame_buffer+y_0*SCREENW+x;
     pixel_iter=y_1-y_0+1;
-    while (pixel_iter--) { *pixel=color;pixel+=SCREEN_W; }
+    while (pixel_iter--) { *pixel=color;pixel+=SCREENW; }
 }
 
 void gfx_rect(int left_x,int top_y,int width,int height,unsigned int color) {
@@ -243,14 +244,14 @@ void gfx_rect_fill(int left_x,int top_y,int width,int height,unsigned int color)
 }
 
 void gfx_rect_hatch(int left_x,int top_y,int width,int height,unsigned int color,int spacing) {
-    int x_iter, y_iter;
+    int x_iter,y_iter;
 
-    for (y_iter = 0; y_iter < height; y_iter++) {
-        for (x_iter = 0; x_iter < width; x_iter++) {
+    for (y_iter=0;y_iter<height;y_iter++) {
+        for (x_iter=0;x_iter<width;x_iter++) {
 
             /* diagonal pattern */
-            if (((x_iter + y_iter) % spacing) == 0) {
-                gfx_put_pixel(left_x + x_iter, top_y + y_iter, color);
+            if (((x_iter+y_iter)%spacing) == 0) {
+                gfx_put_pixel(left_x+x_iter,top_y+y_iter,color);
             }
         }
     }
@@ -277,7 +278,7 @@ int gfx_draw_string(int char_x,int char_y,const char *string,unsigned int color)
             char_x=0;char_y+=8;
         } else {
             gfx_draw_char(char_x,char_y,*string,color);
-            if ((char_x+=8)+8>SCREEN_W) {
+            if ((char_x+=8)+8>SCREENW) {
                 char_x=0;char_y+=8;
             }
         }
