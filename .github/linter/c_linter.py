@@ -7,8 +7,8 @@ Rules enforced for all .c files:
   1.  NO_SPACE_IN_EXPR      - No spaces inside expressions (around = += -= *= /=
                                ++ --, and no space between a name and its '(').
   2.  SNAKE_CASE_VAR        - Variable declarations must be snake_case.
-  3.  BRACE_OPEN_SPACE      - '{' must be preceded by a space and be followed by either a new line or a space
-  4.  BRACE_CLOSE_NEWLINE   - '}' must be followed by a newline, ';', or ' '
+  3.  BRACE_OPEN_SPACE      - '{' must be preceded by a space or '=' and be followed by either a new line or a space
+  4.  BRACE_CLOSE_NEWLINE   - '}' must be followed by a newline, ';', ',', or ' '
   5.  NO_TYPEDEF            - 'typedef' is forbidden.
   6.  DEFINE_UPPERCASE      - #define names must be ALLCAPS with no underscores.
   7.  INCLUDE_EXT           - #include must reference a .c or .asm file.
@@ -226,11 +226,12 @@ def check_brace_open(filepath, lines, clean_lines):
         for m in re.finditer(r'\{', clean):
             col = m.start()
 
-            if col > 0 and clean[col - 1] != ' ':
+            # Allow space OR '=' before '{'
+            if col > 0 and clean[col - 1] not in (' ', '='):
                 violations.append(Violation(
                     filepath=filepath, line_no=line_no, col=col + 1,
                     rule="BRACE_OPEN_SPACE",
-                    message="'{' must be preceded by a space",
+                    message="'{' must be preceded by a space or '='",
                     source_line=raw.rstrip(),
                 ))
 
@@ -258,11 +259,11 @@ def check_brace_close(filepath, lines, clean_lines):
 
             if col + 1 < len(clean):
                 next_char = clean[col + 1]
-                if next_char not in (' ', ';'):
+                if next_char not in (' ', ';', ','):
                     violations.append(Violation(
                         filepath=filepath, line_no=line_no, col=col + 1,
                         rule="BRACE_CLOSE_NEWLINE",
-                        message="'}' must be followed by a newline, space, or ';'",
+                        message="'}' must be followed by a newline, space, ';', or ','",
                         source_line=raw.rstrip(),
                     ))
 

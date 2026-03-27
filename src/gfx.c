@@ -6,7 +6,7 @@ extern void int_to_str(int num, char* buf);
 #include "gfxutils.c"
 #include "initfarmsetup.c"
 
-void * __stdcall CreateThread(void *, unsigned long, unsigned long (__stdcall *)(void *), void *, unsigned long, unsigned long *);
+void * __stdcall CreateThread(void *, unsigned long, unsigned long(__stdcall *)(void *), void *, unsigned long, unsigned long *);
 void __stdcall WaitForSingleObject(void *, unsigned long);
 void __stdcall TerminateThread(void *, unsigned long);
 
@@ -16,36 +16,36 @@ struct button {
     int user_input;
 };
 
-struct button* but_iter = NULL; /* circular linked list */
+struct button* but_iter=NULL; /* circular linked list */
 
 static unsigned long __stdcall button_detect_async(void* arg) {
-    int *ans = (int *)arg;
-    if (but_iter == NULL) { return 0; } /* they closed the GUI */
+    int *ans=(int *)arg;
+    if (but_iter==NULL) { return 0; } /* they closed the GUI */
     while (1) {
         if (click_x>but_iter->left_x&&click_x<but_iter->right_x&&click_y>but_iter->top_y&&click_y<but_iter->bot_y) {
             if (but_iter->user_input>=0) {
                 print_int(but_iter->user_input);
                 print_text("\n");
             }
-            *ans = but_iter->user_input;
+            *ans=but_iter->user_input;
             click_x=click_y=0;
         }
-        but_iter = but_iter->next_button;
+        but_iter=but_iter->next_button;
     }
 }
 
 void add_button(int set_left_x,int set_top_y,int set_width,int set_height,char* set_text,int set_user_input,int is_char,int selected) {
     int text_pos;char num_buf[10];
-    struct button* prev_but_iter = but_iter;
+    struct button* prev_but_iter=but_iter;
 
-    but_iter = mem_alloc(sizeof(struct button));
-    if (prev_but_iter == NULL) {
-        but_iter->next_button = but_iter; /* circles back upon itself */
+    but_iter=mem_alloc(sizeof(struct button));
+    if (prev_but_iter==NULL) {
+        but_iter->next_button=but_iter; /* circles back upon itself */
     } else {
         /* the last node will always point at the first node.
         So make the new last node point at the node the old last node used to point at (the 1st node) */
-        but_iter->next_button = prev_but_iter->next_button;
-        prev_but_iter->next_button = but_iter;
+        but_iter->next_button=prev_but_iter->next_button;
+        prev_but_iter->next_button=but_iter;
     }
     but_iter->left_x=set_left_x;
     but_iter->top_y=set_top_y;
@@ -68,15 +68,15 @@ void add_button(int set_left_x,int set_top_y,int set_width,int set_height,char* 
 }
 
 void free_buttons() {
-    struct button *but_head = but_iter;
+    struct button *but_head=but_iter;
     struct button *next;
-    if (but_iter == NULL) { return; } /* they closed the GUI */
+    if (but_iter==NULL) { return; } /* they closed the GUI */
     do {
-        next = but_iter->next_button;
+        next=but_iter->next_button;
         mem_free(but_iter);
-        but_iter = next;
-    } while (but_iter != but_head);
-    but_iter = NULL;
+        but_iter=next;
+    } while (but_iter!=but_head);
+    but_iter=NULL;
 }
 
 void gui_basic_utils(int money, int year) {
@@ -103,7 +103,7 @@ void feedback_update(char* string) {
 }
 
 void gui_farm_minerals(struct farm* farm_iter, struct crop* crop_iter,char farm_select,char farm_view) {
-    char full_farm_name[] = "Farm _";
+    char full_farm_name[]="Farm _";
     int button_x=20,n,bar_height;
     char num_buf[10];
 

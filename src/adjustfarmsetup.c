@@ -97,11 +97,11 @@ int farm_growth_effects(struct farm* farms,struct crop* crops) {
 }
 
 static unsigned long __stdcall prompt_num_async(void* arg) {
-    int *verified_ans = (int *)arg;
+    int *verified_ans=(int *)arg;
     int num_ans,text_filled_buffer;
     char buf[10];
     while (1) {
-        while (*verified_ans!=0) {}
+        while (*verified_ans!=0) { }
         read_text(buf, sizeof(buf));
         /* More validation should be done in the receiving function, based on variable specific inputs.
         Basic validation is done here though, to make sure we are returning a valid unsigned int and that it's the one the user entered. */
@@ -135,7 +135,7 @@ void prompt_new_crops(struct farm* farms,struct crop* crops) {
     void *prompt_thread,*button_thread;
     struct farm *farm_iter=farms;
     int i,ans=0;
-    char base_prompt[] = "What crop to grow on farm _ (Crop ID): ";
+    char base_prompt[]="What crop to grow on farm _ (Crop ID): ";
 
     struct crop* crop_iter=crops;
 
@@ -146,8 +146,8 @@ void prompt_new_crops(struct farm* farms,struct crop* crops) {
 
         gui_farm_minerals(farms, crops,farm_iter->name,farm_iter->name);
 
-        prompt_thread = CreateThread(0, 0, prompt_num_async, &ans, 0, 0);
-        button_thread = CreateThread(0, 0, button_detect_async, &ans, 0, 0);
+        prompt_thread=CreateThread(0, 0, prompt_num_async, &ans, 0, 0);
+        button_thread=CreateThread(0, 0, button_detect_async, &ans, 0, 0);
 
         while (ans==0) {
             gfx_present();
@@ -216,16 +216,16 @@ int expenses_effects(struct farm* farms) {
 }
 
 void purchase_items(struct farm** farms,int* money) {
-    void *prompt_thread, *button_thread;
+    void *prompt_thread,*button_thread;
     int ans=0;
-    char* base_prompt = "1-Do Nothing, 2-Purchase Farm(-$50), 3-Sell Farm(+$50). What do: ";
+    char* base_prompt="1-Do Nothing, 2-Purchase Farm(-$50), 3-Sell Farm(+$50). What do: ";
     print_text("Money: $");print_int(*money);print_text("\n");
 
     gui_purchase_items_setup();
 
     print_text(base_prompt);
-    prompt_thread = CreateThread(0, 0, prompt_num_async, &ans, 0, 0);
-    button_thread = CreateThread(0, 0, button_detect_async, &ans, 0, 0);
+    prompt_thread=CreateThread(0, 0, prompt_num_async, &ans, 0, 0);
+    button_thread=CreateThread(0, 0, button_detect_async, &ans, 0, 0);
 
     while (ans==0) {
         gfx_present();
