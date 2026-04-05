@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#define MAGIC 0x54AF3B2C1E6D9A08ULL
+#define MAGIC 0x54AF3B2CUL
 
 /*
  * Output layout:
@@ -25,7 +25,8 @@
  */
 
 /* Script up to (not including) the base64 blob */
-static const char script_top[] =
+/* Split into multiple strings to avoid C90 string length limit (509 chars) */
+static const char script_top_a[] =
     ":; # 2>NUL & goto :BATCH_START\n"
     ":; set -e\n"
     ":; TMP=$(mktemp /tmp/run.XXXXXX)\n"
@@ -36,11 +37,9 @@ static const char script_top[] =
     ":BATCH_START\n"
     "@echo off\n"
     "setlocal\n"
-    "set TMP_OUT=%TEMP%\\run_%RANDOM%.exe\n"
-    /* Decode the base64 block that follows this script header.
-       We find it by reading this file, skipping to after ":BATCH_START\r\n@echo off\r\n..."
-       -- easier: we just encode the whole blob between two sentinels and
-       use findstr to extract it, then pipe to a temp b64 file, then decode. */
+    "set TMP_OUT=%TEMP%\\run_%RANDOM%.exe\n";
+
+static const char script_top_b[] =
     "powershell -NoProfile -Command \""
         "$lines=[System.IO.File]::ReadAllLines('%~f0');"
         "$b64='';"
@@ -68,20 +67,13 @@ static const char b64[] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 static void base64_encode(FILE *out, const unsigned char *in, size_t len) {
-    /* Emit base64 with lines prefixed by ":" so cmd treats them as labels
-       (ignored), and sh never reaches them (already exec'd). */
+    size_t i;
     size_t col = 0;
-    for (size_t i = 0; i < len; i += 3) {
-        if (col == 0) {
-            /* no colon prefix — they go between :BEGIN_B64 / :END_B64
-               and powershell reads full lines stripping the newline.
-               Plain base64 lines are fine; cmd won't execute them because
-               it already jumped to :BATCH_START and will hit exit /b
-               before :BEGIN_B64. */
-        }
-        unsigned char a = in[i];
-        unsigned char b = (i+1 < len) ? in[i+1] : 0;
-        unsigned char c = (i+2 < len) ? in[i+2] : 0;
+    unsigned char a, b, c;
+    for (i = 0; i < len; i += 3) {
+        a = in[i];
+        b = (i+1 < len) ? in[i+1] : 0;
+        c = (i+2 < len) ? in[i+2] : 0;
         fputc(b64[a >> 2], out);
         fputc(b64[((a & 3) << 4) | (b >> 4)], out);
         fputc((i+1 < len) ? b64[((b & 15) << 2) | (c >> 6)] : '=', out);
@@ -96,12 +88,13 @@ static void base64_encode(FILE *out, const unsigned char *in, size_t len) {
 }
 
 static unsigned char *read_file(const char *path, size_t *sz) {
+    unsigned char *buf;
     FILE *f = fopen(path, "rb");
     if (!f) { perror(path); return NULL; }
     fseek(f, 0, SEEK_END);
     *sz = (size_t)ftell(f);
     fseek(f, 0, SEEK_SET);
-    unsigned char *buf = malloc(*sz);
+    buf = malloc(*sz);
     if (!buf) { fclose(f); return NULL; }
     fread(buf, 1, *sz, f);
     fclose(f);
@@ -109,20 +102,20 @@ static unsigned char *read_file(const char *path, size_t *sz) {
 }
 
 static void patch_placeholder(char *buf, const char *needle, uint64_t value) {
+    char tmp[12];
     char *p = strstr(buf, needle);
     if (!p) {
         fprintf(stderr, "pack: placeholder '%s' not found\n", needle);
         exit(1);
     }
-    char tmp[12];
-    snprintf(tmp, sizeof(tmp), "%-11llu", (unsigned long long)value);
+    snprintf(tmp, sizeof(tmp), "%-11lu", (unsigned long)value);
     memcpy(p, tmp, 11);
 }
 
 /* Calculate base64 encoded size (with newlines every 76 chars) */
 static size_t b64_encoded_size(size_t raw) {
-    size_t chars = ((raw + 2) / 3) * 4;          /* base64 chars */
-    size_t newlines = (chars + 75) / 76;           /* one \n per 76-char line */
+    size_t chars = ((raw + 2) / 3) * 4;
+    size_t newlines = (chars + 75) / 76;
     return chars + newlines;
 }
 
@@ -134,7 +127,17 @@ struct fat_header {
     uint64_t linux_size;
 };
 
-int main(int argc, char **argv) {
+int main2(int argc, char **argv) {
+    size_t lin_sz, win_sz;
+    size_t top_a_len, top_b_len, mid_len, b64_sz;
+    uint64_t linux_offset, linux_size;
+    unsigned char *lin_bin;
+    unsigned char *win_bin;
+    char *top_a;
+    char *top_b;
+    FILE *out;
+    struct fat_header hdr;
+
     if (argc != 4) {
         fprintf(stderr,
             "Usage: pack <linux_bin> <win_bin> <output.bat>\n"
@@ -144,45 +147,46 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    size_t lin_sz, win_sz;
-    unsigned char *lin_bin = read_file(argv[1], &lin_sz);
-    unsigned char *win_bin = read_file(argv[2], &win_sz);
+    lin_bin = read_file(argv[1], &lin_sz);
+    win_bin = read_file(argv[2], &win_sz);
     if (!lin_bin || !win_bin) return 1;
 
-    size_t top_len = sizeof(script_top) - 1;
-    size_t mid_len = sizeof(script_mid) - 1;
-    size_t b64_sz  = b64_encoded_size(win_sz);
+    top_a_len = sizeof(script_top_a) - 1;
+    top_b_len = sizeof(script_top_b) - 1;
+    mid_len   = sizeof(script_mid) - 1;
+    b64_sz    = b64_encoded_size(win_sz);
 
-    /* Linux binary starts after: script_top + b64 blob + script_mid */
-    uint64_t linux_offset = (uint64_t)(top_len + b64_sz + mid_len);
-    uint64_t linux_size   = (uint64_t)lin_sz;
+    linux_offset = (uint64_t)(top_a_len + top_b_len + b64_sz + mid_len);
+    linux_size   = (uint64_t)lin_sz;
 
-    /* Patch script_top in place */
-    char *top = malloc(top_len + 1);
-    memcpy(top, script_top, top_len + 1);
-    patch_placeholder(top, "LINUX_OFF__", linux_offset);
-    patch_placeholder(top, "LINUX_SZ___", linux_size);
+    top_a = malloc(top_a_len + 1);
+    top_b = malloc(top_b_len + 1);
+    memcpy(top_a, script_top_a, top_a_len + 1);
+    memcpy(top_b, script_top_b, top_b_len + 1);
+    patch_placeholder(top_a, "LINUX_OFF__", linux_offset);
+    patch_placeholder(top_a, "LINUX_SZ___", linux_size);
 
-    FILE *out = fopen(argv[3], "wb");
+    out = fopen(argv[3], "wb");
     if (!out) { perror(argv[3]); return 1; }
 
-    fwrite(top, 1, top_len, out);
+    fwrite(top_a, 1, top_a_len, out);
+    fwrite(top_b, 1, top_b_len, out);
     base64_encode(out, win_bin, win_sz);
     fwrite(script_mid, 1, mid_len, out);
     fwrite(lin_bin, 1, lin_sz, out);
 
-    struct fat_header hdr;
     hdr.magic        = MAGIC;
     hdr.linux_offset = linux_offset;
-    hdr.win_offset   = 0;        /* unused; win binary decoded from b64 */
+    hdr.win_offset   = 0;
     hdr.win_size     = win_sz;
     hdr.linux_size   = linux_size;
     fwrite(&hdr, 1, sizeof(hdr), out);
     fclose(out);
 
-    free(lin_bin); free(win_bin); free(top);
+    free(lin_bin); free(win_bin); free(top_a); free(top_b);
 
-    printf("Packed: %s  (b64_win=%zu  linux=%zu  linux_offset=%llu)\n",
-           argv[3], b64_sz, lin_sz, (unsigned long long)linux_offset);
+    printf("Packed: %s  (b64_win=%lu  linux=%lu  linux_offset=%lu)\n",
+           argv[3], (unsigned long)b64_sz, (unsigned long)lin_sz,
+           (unsigned long)linux_offset);
     return 0;
 }

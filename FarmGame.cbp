@@ -66,11 +66,16 @@
 		<Unit filename="src/main.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="src/pack.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="src/utils.asm">
 			<Option compilerVar="CC" />
 			<Option link="0" />
 			<Option compiler="gcc" use="1" buildCommand='nasm -f win64 &quot;$file&quot; -o obj\Debug\utils.obj' />
 		</Unit>
+		<Unit filename="src/utilslinux.asm" />
+		<Unit filename="src/utilswindows.asm" />
 		<Extensions>
 			<lib_finder disable_auto="1" />
 		</Extensions>
