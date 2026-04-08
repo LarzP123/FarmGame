@@ -203,7 +203,7 @@ read_text:
 
     ; ReadConsoleA(hStdIn, buf, capacity-1, &charsRead, NULL)
     mov     rcx, [rel hStdIn]       ; hConsole
-    mov     rdx, rbx                ; lpBuffer
+    mov     rdx, rbx                ; lp_buffer
     lea     r8,  [rdi-1]            ; nCharsToRead = capacity-1
     lea     r9,  [rsp+24]           ; lpNumberOfCharsRead (inside shadow space)
     mov     qword [rsp+32], 0       ; lpReserved = NULL (5th arg at [rsp+32])

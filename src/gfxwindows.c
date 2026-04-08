@@ -88,6 +88,10 @@ extern int    __stdcall DeleteDC(void*);
 extern int    __stdcall BitBlt(void*,int,int,int,int,void*,int,int,unsigned int);
 extern void * __stdcall GetModuleHandleA(const char*);
 
+static void *create_thread(void *a,unsigned long b,unsigned long(__stdcall *c)(void *),void *d,unsigned long e,unsigned long *f) {
+    return CreateThread(a,b,c,d,e,f);
+}
+
 /* utils.asm */
 extern int abs_val(int x);
 extern void mem_set(void *dst,int val,unsigned int n);
