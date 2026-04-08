@@ -33,7 +33,7 @@ We can interface with Windows System Binaries ourselves.
 
 # Playing
 
-The releases on GitHub should contain pre-compiled .exe files that work on modern 64=bit Windows machines. You should simply be able to download the exe and run it,
+The releases on GitHub should contain pre-compiled .exe files that work on modern 64-bit Windows machines. You should simply be able to download the exe and run it,
 without requiring any other dependent files that do not come with Windows.
 
 If you don't know how to download the file from the releases page, you can also run this in PowerShell on your computer to get+run the latest version
