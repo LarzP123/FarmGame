@@ -1,5 +1,5 @@
-#ifndef GFXUTILS
-#define GFXUTILS
+#ifndef GFXWINDOWS
+#define GFXWINDOWS
 
 #include "charbitmap.c"
 
@@ -67,6 +67,7 @@ struct winuser_thread_msg { /* MSG */
 };
 
 /* Win32 imports (-lgdi32 -luser32 in linker settings) */
+extern void * __stdcall CreateThread(void *,unsigned long,unsigned long(__stdcall *)(void *),void *,unsigned long,unsigned long *);
 extern void * __stdcall RegisterClassExA(const struct wind_class *);
 extern void * __stdcall CreateWindowExA(unsigned int,const char*,const char*,unsigned int,int,int,int,int,void*,void*,void*,void*);
 extern int    __stdcall AdjustWindowRect(struct rect*,unsigned int,int);
@@ -86,6 +87,10 @@ extern int    __stdcall DeleteObject(void*);
 extern int    __stdcall DeleteDC(void*);
 extern int    __stdcall BitBlt(void*,int,int,int,int,void*,int,int,unsigned int);
 extern void * __stdcall GetModuleHandleA(const char*);
+
+static void *create_thread(void *a,unsigned long b,unsigned long(__stdcall *c)(void *),void *d,unsigned long e,unsigned long *f) {
+    return CreateThread(a,b,c,d,e,f);
+}
 
 /* utils.asm */
 extern int abs_val(int x);
@@ -201,90 +206,6 @@ int gfx_present(void) {
     }
     BitBlt(g_hdc,0,0,SCREENW,SCREENH,g_memdc,0,0,0x00CC0020); /* SRCCOPY */
     return g_running;
-}
-
-void gfx_put_pixel(int x,int y,unsigned int color) {
-    frame_buffer[y*SCREENW+x]=color;
-}
-
-void gfx_hline(int x_0,int x_1,int y,unsigned int color) {
-    unsigned int *pixel;
-    int pixel_iter;
-    if ((unsigned int)y>=SCREENH) { return; }
-    if (x_0<0) { x_0=0; }
-    if (x_1>=SCREENW) { x_1=SCREENW-1; }
-    pixel=frame_buffer+y*SCREENW+x_0;
-    pixel_iter=x_1-x_0+1;
-    while (pixel_iter--) { *pixel++=color; }
-}
-
-void gfx_vline(int x,int y_0,int y_1,unsigned int color) {
-    unsigned int *pixel;
-    int pixel_iter;
-    if ((unsigned int)x >= SCREENW) { return; }
-    if (y_0<0) { y_0=0; }
-    if (y_1>=SCREENH) { y_1=SCREENH-1; }
-    pixel=frame_buffer+y_0*SCREENW+x;
-    pixel_iter=y_1-y_0+1;
-    while (pixel_iter--) { *pixel=color;pixel+=SCREENW; }
-}
-
-void gfx_rect(int left_x,int top_y,int width,int height,unsigned int color) {
-    gfx_hline(left_x,left_x+width-1,top_y,color); /* top */
-    gfx_hline(left_x,left_x+width-1,top_y+height-1,color); /* bottom */
-    gfx_vline(left_x,top_y,top_y+height-1,color); /* left */
-    gfx_vline(left_x+width-1,top_y,top_y+height-1,color); /* right */
-}
-
-void gfx_rect_fill(int left_x,int top_y,int width,int height,unsigned int color) {
-    int row;
-    for (row=top_y;row<top_y+height;row++) {
-        gfx_hline(left_x,left_x+width-1,row,color);
-    }
-}
-
-void gfx_rect_hatch(int left_x,int top_y,int width,int height,unsigned int color,int spacing) {
-    int x_iter,y_iter;
-
-    for (y_iter=0;y_iter<height;y_iter++) {
-        for (x_iter=0;x_iter<width;x_iter++) {
-
-            /* diagonal pattern */
-            if (((x_iter+y_iter)%spacing) == 0) {
-                gfx_put_pixel(left_x+x_iter,top_y+y_iter,color);
-            }
-        }
-    }
-}
-
-int gfx_draw_char(int char_x,int char_y,char char_in,unsigned int color) {
-    int x_iter,y_iter,char_index=(unsigned char)char_in-32;
-    unsigned char char_bitmap;
-    if (char_index<0||char_index>95) { return 0; }
-    for (x_iter=0;x_iter<8;x_iter++) {
-        char_bitmap=gfx_font[char_index][x_iter];
-        for (y_iter=0;y_iter<8;y_iter++) {
-            if (char_bitmap&(0x80>>y_iter)) {
-                gfx_put_pixel(char_x+y_iter,char_y+x_iter,color);
-            }
-        }
-    }
-    return char_x+8;
-}
-
-int gfx_draw_string(int char_x,int char_y,const char *string,unsigned int color) {
-    while (*string) {
-        if (*string=='\n') {
-            char_x=0;char_y+=8;
-        } else {
-            gfx_draw_char(char_x,char_y,*string,color);
-            if ((char_x+=8)+8>SCREENW) {
-                char_x=0;char_y+=8;
-            }
-        }
-        string++;
-    }
-    return char_x;
 }
 
 #endif

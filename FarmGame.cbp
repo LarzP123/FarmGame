@@ -33,11 +33,6 @@
 			<Add option="-Wall" />
 			<Add option="-std=c89 -pedantic-errors" />
 		</Compiler>
-		<Linker>
-			<Add library="obj/Debug/utils.obj" />
-			<Add library="gdi32" />
-			<Add library="user32" />
-		</Linker>
 		<Unit filename="src/adjustfarmsetup.c">
 			<Option compilerVar="CC" />
 			<Option compile="0" />
@@ -48,12 +43,22 @@
 			<Option compile="0" />
 			<Option link="0" />
 		</Unit>
+		<Unit filename="src/fileswindows.c">
+			<Option compilerVar="CC" />
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
 		<Unit filename="src/gfx.c">
 			<Option compilerVar="CC" />
 			<Option compile="0" />
 			<Option link="0" />
 		</Unit>
-		<Unit filename="src/gfxutils.c">
+		<Unit filename="src/gfxlinux.c">
+			<Option compilerVar="CC" />
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="src/gfxwindows.c">
 			<Option compilerVar="CC" />
 			<Option compile="0" />
 			<Option link="0" />
@@ -63,13 +68,26 @@
 			<Option compile="0" />
 			<Option link="0" />
 		</Unit>
-		<Unit filename="src/main.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="src/utils.asm">
+		<Unit filename="src/pack.c">
 			<Option compilerVar="CC" />
 			<Option link="0" />
-			<Option compiler="gcc" use="1" buildCommand='nasm -f win64 &quot;$file&quot; -o obj\Debug\utils.obj' />
+			<Option compiler="gcc" use="1" buildCommand='gcc -std=c90 &quot;$file&quot; &quot;obj\Debug\utilswindows.obj&quot; -o obj\Debug\pack.exe' />
+		</Unit>
+		<Unit filename="src/startgame.c">
+			<Option compilerVar="CC" />
+			<Option link="0" />
+			<Option weight="70" />
+			<Option compiler="gcc" use="1" buildCommand="compilehelpers\wslbuild.bat $file obj/Debug/main $object" />
+		</Unit>
+		<Unit filename="src/utilslinux.asm">
+			<Option compilerVar="CC" />
+			<Option link="0" />
+			<Option compiler="gcc" use="1" buildCommand='nasm -f elf64 -DLINUX &quot;$file&quot; -o obj\Debug\utilslinux.obj' />
+		</Unit>
+		<Unit filename="src/utilswindows.asm">
+			<Option compilerVar="CC" />
+			<Option link="0" />
+			<Option compiler="gcc" use="1" buildCommand='nasm -f win64 &quot;$file&quot; -o obj\Debug\utilswindows.obj' />
 		</Unit>
 		<Extensions>
 			<lib_finder disable_auto="1" />

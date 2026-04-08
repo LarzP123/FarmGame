@@ -3,12 +3,12 @@
 
 extern void int_to_str(int num,char* buf);
 
-#include "gfxutils.c"
+#ifdef _WIN32
+    #include "gfxwindows.c"
+#else
+    #include "gfxlinux.c"
+#endif
 #include "initfarmsetup.c"
-
-void * __stdcall CreateThread(void *,unsigned long,unsigned long(__stdcall *)(void *),void *,unsigned long,unsigned long *);
-void __stdcall WaitForSingleObject(void *,unsigned long);
-void __stdcall TerminateThread(void *,unsigned long);
 
 struct button {
     int left_x,top_y,right_x,bot_y;
@@ -18,10 +18,90 @@ struct button {
 
 struct button* but_iter=NULL; /* circular linked list */
 
-static unsigned long __stdcall button_detect_async(void* arg) {
-    int *ans=(int *)arg;
-    if (but_iter==NULL) { return 0; } /* they closed the GUI */
-    while (1) {
+void gfx_put_pixel(int x,int y,unsigned int color) {
+    frame_buffer[y*SCREENW+x]=color;
+}
+
+void gfx_hline(int x_0,int x_1,int y,unsigned int color) {
+    unsigned int *pixel;
+    int pixel_iter;
+    if ((unsigned int)y>=SCREENH) { return; }
+    if (x_0<0) { x_0=0; }
+    if (x_1>=SCREENW) { x_1=SCREENW-1; }
+    pixel=frame_buffer+y*SCREENW+x_0;
+    pixel_iter=x_1-x_0+1;
+    while (pixel_iter--) { *pixel++=color; }
+}
+
+void gfx_vline(int x,int y_0,int y_1,unsigned int color) {
+    unsigned int *pixel;
+    int pixel_iter;
+    if ((unsigned int)x >= SCREENW) { return; }
+    if (y_0<0) { y_0=0; }
+    if (y_1>=SCREENH) { y_1=SCREENH-1; }
+    pixel=frame_buffer+y_0*SCREENW+x;
+    pixel_iter=y_1-y_0+1;
+    while (pixel_iter--) { *pixel=color;pixel+=SCREENW; }
+}
+
+void gfx_rect(int left_x,int top_y,int width,int height,unsigned int color) {
+    gfx_hline(left_x,left_x+width-1,top_y,color);
+    gfx_hline(left_x,left_x+width-1,top_y+height-1,color);
+    gfx_vline(left_x,top_y,top_y+height-1,color);
+    gfx_vline(left_x+width-1,top_y,top_y+height-1,color);
+}
+
+void gfx_rect_fill(int left_x,int top_y,int width,int height,unsigned int color) {
+    int row;
+    for (row=top_y;row<top_y+height;row++) {
+        gfx_hline(left_x,left_x+width-1,row,color);
+    }
+}
+
+void gfx_rect_hatch(int left_x,int top_y,int width,int height,unsigned int color,int spacing) {
+    int x_iter,y_iter;
+    for (y_iter=0;y_iter<height;y_iter++) {
+        for (x_iter=0;x_iter<width;x_iter++) {
+            if (((x_iter+y_iter)%spacing) == 0) {
+                gfx_put_pixel(left_x+x_iter,top_y+y_iter,color);
+            }
+        }
+    }
+}
+
+int gfx_draw_char(int char_x,int char_y,char char_in,unsigned int color) {
+    int x_iter,y_iter,char_index=(unsigned char)char_in-32;
+    unsigned char char_bitmap;
+    if (char_index<0||char_index>95) { return 0; }
+    for (x_iter=0;x_iter<8;x_iter++) {
+        char_bitmap=gfx_font[char_index][x_iter];
+        for (y_iter=0;y_iter<8;y_iter++) {
+            if (char_bitmap&(0x80>>y_iter)) {
+                gfx_put_pixel(char_x+y_iter,char_y+x_iter,color);
+            }
+        }
+    }
+    return char_x+8;
+}
+
+int gfx_draw_string(int char_x,int char_y,const char *string,unsigned int color) {
+    while (*string) {
+        if (*string=='\n') {
+            char_x=0;char_y+=8;
+        } else {
+            gfx_draw_char(char_x,char_y,*string,color);
+            if ((char_x+=8)+8>SCREENW) {
+                char_x=0;char_y+=8;
+            }
+        }
+        string++;
+    }
+    return char_x;
+}
+
+static int button_detect(int* ans) {
+    struct button *but_head=but_iter;
+    do {
         if (click_x>but_iter->left_x&&click_x<but_iter->right_x&&click_y>but_iter->top_y&&click_y<but_iter->bot_y) {
             if (but_iter->user_input>=0) {
                 print_int(but_iter->user_input);
@@ -31,7 +111,7 @@ static unsigned long __stdcall button_detect_async(void* arg) {
             click_x=click_y=0;
         }
         but_iter=but_iter->next_button;
-    }
+    } while (but_iter!=NULL && but_iter!=but_head);
 }
 
 void add_button(int set_left_x,int set_top_y,int set_width,int set_height,char* set_text,int set_user_input,int is_char,int selected) {
@@ -40,10 +120,8 @@ void add_button(int set_left_x,int set_top_y,int set_width,int set_height,char* 
 
     but_iter=mem_alloc(sizeof(struct button));
     if (prev_but_iter==NULL) {
-        but_iter->next_button=but_iter; /* circles back upon itself */
+        but_iter->next_button=but_iter;
     } else {
-        /* the last node will always point at the first node.
-        So make the new last node point at the node the old last node used to point at (the 1st node) */
         but_iter->next_button=prev_but_iter->next_button;
         prev_but_iter->next_button=but_iter;
     }
@@ -75,7 +153,7 @@ void free_buttons() {
         next=but_iter->next_button;
         mem_free(but_iter);
         but_iter=next;
-    } while (but_iter!=but_head);
+    } while (but_iter!=NULL && but_iter!=but_head);
     but_iter=NULL;
 }
 
